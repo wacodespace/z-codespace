@@ -13,7 +13,7 @@
 ## 一键安装
 
 ```bash
-git clone git@github.com:acodespace/dotfiles.git ~/dotfiles && bash ~/dotfiles/install.sh
+git clone git@github.com:wacodespace/dotfiles.git ~/dotfiles && bash ~/dotfiles/install.sh
 ```
 
 安装脚本会：
