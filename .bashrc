@@ -96,7 +96,7 @@ alias wrocm='watch -n 0.1 rocm-smi --showuse --showmeminfo vram --showpids'
 alias ossutil='ossutil_x86_64'
 alias pps='pip show'
 alias v3='rocprofv3'
-alias oss='ossutil64 -i \$OSS_AK_ID -k \$OSS_AK_SECRET -e \${OSS_ENDPOINT:-cn-zhangjiakou.oss.aliyuncs.com} cp'
+alias oss='ossutil64 -i $OSS_AK_ID -k $OSS_AK_SECRET -e ${OSS_ENDPOINT:-cn-zhangjiakou.oss.aliyuncs.com} cp'
 
 # --- docker → pouch 包装 ---
 docker() {
@@ -120,6 +120,9 @@ fi
 
 # --- 加载用户自定义别名 ---
 [ -f ~/.bash_aliases ] && . ~/.bash_aliases
+
+# --- 加载私有配置（含密钥，不进 git 仓库）---
+[ -f ~/.bash_private ] && . ~/.bash_private
 
 # --- NVM ---
 export NVM_DIR="$HOME/.nvm"

@@ -1,0 +1,8 @@
+# ~/.bash_private - 私有配置（含密钥），不进 git 仓库
+# 使用方法：cp ~/.bash_private.example ~/.bash_private，然后填入真实值
+# ============================================================
+
+# --- 阿里云 OSS ---
+export OSS_AK_ID="your_access_key_id"
+export OSS_AK_SECRET="your_access_key_secret"
+export OSS_ENDPOINT="cn-zhangjiakou.oss.aliyuncs.com"
