@@ -8,17 +8,39 @@
 - **`.tmux.conf`** — Tmux 配置（vi 模式、C-a 前缀、鼠标支持等）
 - **`.vimrc`** — Vim 配置（缩进、搜索、编码、折叠等，插件已注释）
 - **`.bash_private.example`** — 私有配置模板（密钥等，需手动复制填写，不进仓库）
-- **`install.sh`** — 一键安装脚本
+- **`install.sh`** — 安装/卸载脚本（支持 --force、--uninstall、--dry-run）
 
-## 一键安装
+## 安装与使用
+
+### 快速安装
 
 ```bash
 git clone git@github.com:wacodespace/dotfiles.git ~/dotfiles && bash ~/dotfiles/install.sh
 ```
 
-安装脚本会：
-1. 自动备份已有的 `~/.bashrc`、`~/.tmux.conf`、`~/.vimrc`（加时间戳后缀）
-2. 创建符号链接指向仓库中的配置文件
+### 脚本选项
+
+```bash
+# 正常安装（自动备份）
+bash ~/dotfiles/install.sh
+
+# 强制覆盖（不备份）
+bash ~/dotfiles/install.sh --force
+
+# 预览模式（只显示操作，不执行）
+bash ~/dotfiles/install.sh --dry-run
+
+# 卸载（恢复备份）
+bash ~/dotfiles/install.sh --uninstall
+
+# 查看帮助
+bash ~/dotfiles/install.sh --help
+```
+
+### 安装过程
+
+1. 自动备份已有配置（加时间戳后缀）
+2. 创建符号链接指向仓库文件
 3. 设置 Git 全局 HTTPS → SSH 重写规则
 
 安装后执行 `source ~/.bashrc` 或重新打开终端即可生效。
