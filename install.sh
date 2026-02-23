@@ -33,6 +33,7 @@ link_file() {
 # --- 安装配置文件 ---
 link_file "$DOTFILES_DIR/.bashrc"    "$HOME/.bashrc"
 link_file "$DOTFILES_DIR/.tmux.conf" "$HOME/.tmux.conf"
+link_file "$DOTFILES_DIR/.vimrc"     "$HOME/.vimrc"
 
 # --- 应用 Git 全局配置 ---
 git config --global url."git@github.com:".insteadOf "https://github.com/"
