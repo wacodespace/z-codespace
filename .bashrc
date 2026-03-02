@@ -67,7 +67,10 @@ alias cdz='cd /home/admin/zhc'
 
 # --- Git 别名 ---
 alias g='git'
-alias gl='git log --oneline -'
+
+gl() {
+    git log --oneline -"${1:-10}"
+}
 alias gp='git pull'
 alias gf='git diff'
 alias gs='git status'
