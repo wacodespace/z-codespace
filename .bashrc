@@ -83,6 +83,7 @@ alias gcl='git clone --recurse-submodules'
 alias glt='git reflog --date=short'
 alias gamd='git commit --amend --no-edit'
 alias gpuf='git push --force-with-lease'
+alias gfn='git diff --numstat --'
 
 # --- GPU 监控别名 (NVIDIA) ---
 alias nv='nvidia-smi'
@@ -111,6 +112,12 @@ export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:/opt/rocm/b
 
 # --- Git 全局配置: HTTPS → SSH ---
 git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+# --- Git 中文编码配置 ---
+git config --global core.quotepath false
+git config --global gui.encoding utf-8
+git config --global i18n.commitencoding utf-8
+git config --global i18n.logoutputencoding utf-8
 
 # --- Bash 补全 ---
 if ! shopt -oq posix; then
