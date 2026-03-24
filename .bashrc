@@ -65,6 +65,26 @@ alias i='iflow'
 alias cdn='cd /chatgpt_nas'
 alias cdz='cd /home/admin/zhc'
 
+# --- 本仓库 Git 作者（写入该仓库 .git/config，不依赖全局 user.name / user.email）---
+# 优先 $DOTFILES_DIR；否则若 ~/.bashrc 是指向本仓库的符号链接则自动解析目录；否则用 $HOME/dotfiles
+{
+    _df_git=""
+    if [[ -n "${DOTFILES_DIR:-}" && -d "${DOTFILES_DIR}/.git" ]]; then
+        _df_git="$DOTFILES_DIR"
+    elif [[ -L "$HOME/.bashrc" ]]; then
+        _df_git=$(dirname "$(readlink -f "$HOME/.bashrc" 2>/dev/null)" 2>/dev/null) || true
+        [[ -n "$_df_git" && ! -d "${_df_git}/.git" ]] && _df_git=""
+    fi
+    if [[ -z "$_df_git" && -d "$HOME/dotfiles/.git" ]]; then
+        _df_git="$HOME/dotfiles"
+    fi
+    if [[ -n "$_df_git" && -d "${_df_git}/.git" ]]; then
+        git -C "$_df_git" config user.name "acodespace"
+        git -C "$_df_git" config user.email "7epimenides@gmail.com"
+    fi
+    unset _df_git
+}
+
 # --- Git 别名 ---
 alias g='git'
 
