@@ -71,6 +71,9 @@ alias g='git'
 gl() {
     git log --oneline -"${1:-10}"
 }
+gls() {
+    git log --shortstat -"${1:-10}"
+}
 alias gp='git pull'
 alias gf='git diff'
 alias gs='git status'
@@ -83,6 +86,7 @@ alias gcl='git clone --recurse-submodules'
 alias glt='git reflog --date=short'
 alias gamd='git commit --amend --no-edit'
 alias gpuf='git push --force-with-lease'
+alias gfs='git diff --stat --'
 alias gfn='git diff --numstat --'
 
 # --- GPU 监控别名 (NVIDIA) ---
