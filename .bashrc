@@ -114,6 +114,19 @@ alias gpuf='git push --force-with-lease'
 alias gfs='git diff --stat --'
 alias gfn='git diff --numstat --'
 
+# 列出上面定义的 Git 别名与函数（gg：git 快捷键备忘）
+gg() {
+    printf '%s\n' "=== Git 快捷键（本文件）===" ""
+    printf '%s\n' "别名:"
+    alias | grep -E "^alias (g|gp|gf|gs|gss|gsw|gb|gc|gclone|gcl|glt|gamd|gpuf|gfs|gfn)='" | sed 's/^/  /' | sort
+    printf '%s\n' "" "函数:"
+    printf '%s\n' \
+        "  gl [N]     git log --oneline（省略 N 时默认 10 条）" \
+        "  gls [N]    git log --shortstat（省略 N 时默认 10 条）" \
+        "" \
+        "（提示：单独看全部 alias 用命令 alias）"
+}
+
 # --- GPU 监控别名 (NVIDIA) ---
 alias nv='nvidia-smi'
 alias wnv='watch -n 0.1 nvidia-smi'
