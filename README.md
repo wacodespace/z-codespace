@@ -45,6 +45,43 @@ bash ~/dotfiles/install.sh --help
 
 安装后执行 `source ~/.bashrc` 或重新打开终端即可生效。
 
+### AI CLI 一键安装
+
+`.bashrc` 内置了安装与启动函数，可在新机器上直接安装并启动常用 AI 命令行工具：
+
+```bash
+# 安装 Claude Code
+icc
+
+# 安装 Codex CLI
+icx
+
+# 启动 Claude Code
+cc
+
+# 启动 Codex CLI
+cx
+```
+
+行为说明：
+
+- `icc`：安装 `Claude Code`
+- `icx`：安装 `Codex CLI`
+- `cc`：启动 `Claude Code`
+- `cx`：启动 `Codex CLI`
+- 若系统缺少 `nvm` / `node` / `npm`，会自动安装 `nvm` 并切换到 `Node.js LTS`
+- `icc` 优先尝试 Claude 官方原生安装脚本；若脚本因区域限制不可用或返回网页内容，会自动回退到 `npm` 安装
+- `icx` 通过 `npm install -g @openai/codex` 安装
+- `cc` / `cx` 会把附加参数原样透传给 `claude` / `codex`
+
+首次使用前请先加载配置：
+
+```bash
+source ~/.bashrc
+```
+
+安装完成后，可分别运行 `claude` 或 `codex` 继续完成登录/认证。
+
 ## 私有配置（密钥）
 
 仓库中不存储任何密钥。涉及密钥的配置（如 OSS）通过 `~/.bash_private` 加载，该文件需在每台新机器上手动创建：
@@ -63,6 +100,9 @@ vim ~/.bash_private   # 填入真实密钥
 - 去重后的 PATH
 - Git HTTPS → SSH 自动重写（`git config --global url."git@github.com:".insteadOf "https://github.com/"`)
 - docker → pouch 包装函数
+- `icc` / `icx` 一键安装 Claude Code 与 Codex CLI
+- `cc` / `cx` 快速启动 Claude Code 与 Codex CLI
+- 自动补齐 `nvm`、`Node.js LTS` 与 `npm` 运行环境
 
 ### .tmux.conf
 - `C-a` 前缀键

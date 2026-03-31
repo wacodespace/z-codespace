@@ -66,7 +66,6 @@ alias l='ls -CF'
 alias rm='rm -I'
 
 # --- 导航别名 ---
-alias i='iflow'
 alias cdn='cd /chatgpt_nas'
 alias cdz='cd /home/admin/zhc'
 
@@ -180,3 +179,119 @@ fi
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+_ai_fetch() {
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$1"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO- "$1"
+    else
+        printf '%s\n' "需要 curl 或 wget，当前系统未找到。" >&2
+        return 1
+    fi
+}
+
+_ai_download_to() {
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$1" -o "$2"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO "$2" "$1"
+    else
+        printf '%s\n' "需要 curl 或 wget，当前系统未找到。" >&2
+        return 1
+    fi
+}
+
+_ai_file_looks_like_shell() {
+    [ -s "$1" ] || return 1
+    head -n 5 "$1" | grep -Eiq '^(#!|set[[:space:]]+-|[[:space:]]*(if|case|function)[[:space:](]|[[:space:]]*[A-Za-z_][A-Za-z0-9_]*\(\)[[:space:]]*\{)'
+}
+
+_ai_ensure_nvm() {
+    export NVM_DIR="$HOME/.nvm"
+    if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+        _ai_fetch "https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh" | bash || return 1
+    fi
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    command -v nvm >/dev/null 2>&1
+}
+
+_ai_ensure_node() {
+    local node_major=""
+    if command -v node >/dev/null 2>&1; then
+        node_major=$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || true)
+    fi
+    if [ -n "$node_major" ] && [ "$node_major" -ge 18 ] && command -v npm >/dev/null 2>&1; then
+        return 0
+    fi
+    _ai_ensure_nvm || return 1
+    nvm install --lts || return 1
+    nvm alias default 'lts/*' >/dev/null 2>&1 || true
+    nvm use default >/dev/null 2>&1 || nvm use --lts || return 1
+    command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1
+}
+
+_install_claude_code() {
+    if command -v claude >/dev/null 2>&1; then
+        printf '%s\n' "claude 已存在：$(command -v claude)"
+        claude --version 2>/dev/null || true
+        return 0
+    fi
+    local installer_tmp=""
+    installer_tmp=$(mktemp 2>/dev/null) || installer_tmp="/tmp/claude-install.$$"
+    if _ai_download_to "https://claude.ai/install.sh" "$installer_tmp"; then
+        if _ai_file_looks_like_shell "$installer_tmp"; then
+            if bash "$installer_tmp"; then
+                hash -r
+            fi
+        else
+            printf '%s\n' "Claude 原生安装脚本不可用，可能是区域限制或返回了网页，改用 npm 安装。" >&2
+        fi
+    fi
+    rm -f "$installer_tmp"
+    if command -v claude >/dev/null 2>&1; then
+        printf '%s\n' "Claude Code 安装完成。"
+        claude --version 2>/dev/null || true
+        return 0
+    fi
+    _ai_ensure_node || return 1
+    npm install -g @anthropic-ai/claude-code || return 1
+    hash -r
+    if command -v claude >/dev/null 2>&1; then
+        printf '%s\n' "Claude Code 安装完成（npm 回退方案）。"
+        claude --version 2>/dev/null || true
+        return 0
+    fi
+    printf '%s\n' "Claude Code 安装失败。" >&2
+    return 1
+}
+
+_install_codex() {
+    _ai_ensure_node || return 1
+    npm install -g @openai/codex || return 1
+    hash -r
+    if command -v codex >/dev/null 2>&1; then
+        printf '%s\n' "Codex 安装完成。"
+        codex --version 2>/dev/null || true
+        return 0
+    fi
+    printf '%s\n' "Codex 安装失败。" >&2
+    return 1
+}
+
+icc() {
+    _install_claude_code
+}
+
+icx() {
+    _install_codex
+}
+
+cc() {
+    claude "$@"
+}
+
+cx() {
+    codex "$@"
+}
