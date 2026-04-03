@@ -59,6 +59,15 @@ if [ -x /usr/bin/dircolors ]; then
     alias egrep='egrep --color=auto'
 fi
 
+# --- 平台特定配置 ---
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS 特定配置
+    alias ls='ls -G'
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Linux 特定配置
+    alias ls='ls --color=auto'
+fi
+
 # --- 常用别名 ---
 alias ll='ls -lh'
 alias la='ls -A'

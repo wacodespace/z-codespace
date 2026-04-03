@@ -124,6 +124,7 @@ main() {
         restore_backup "$HOME/.bashrc"
         restore_backup "$HOME/.tmux.conf"
         restore_backup "$HOME/.vimrc"
+        restore_backup "$HOME/.config/alacritty/alacritty.toml"
         log_info "卸载完成！请重新打开终端使配置生效。"
     else
         # --- 安装模式 ---
@@ -131,6 +132,9 @@ main() {
         link_file "$DOTFILES_DIR/.bashrc"    "$HOME/.bashrc"
         link_file "$DOTFILES_DIR/.tmux.conf" "$HOME/.tmux.conf"
         link_file "$DOTFILES_DIR/.vimrc"     "$HOME/.vimrc"
+        
+        # Alacritty 配置
+        link_file "$DOTFILES_DIR/.config/alacritty/alacritty.toml" "$HOME/.config/alacritty/alacritty.toml"
         
         setup_git_config
         
