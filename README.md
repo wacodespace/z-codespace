@@ -1,53 +1,151 @@
-# dotfiles
+# 开发环境配置管理
 
-个人开发环境配置文件，适用于 Linux 容器环境（AMD ROCm / NVIDIA GPU 开发）。
+这个仓库包含了 macOS 本地开发环境和 Linux 服务器环境的配置文件和安装脚本。
 
-## 包含文件
+## 🎯 支持的平台
 
-- **`.bashrc`** — Shell 配置（别名、PATH、Git 别名、GPU 监控等）
-- **`.tmux.conf`** — Tmux 配置（vi 模式、C-a 前缀、鼠标支持等）
-- **`.vimrc`** — Vim 配置（缩进、搜索、编码、折叠等，插件已注释）
-- **`.bash_private.example`** — 私有配置模板（密钥等，需手动复制填写，不进仓库）
-- **`install.sh`** — 安装/卸载脚本（支持 --force、--uninstall、--dry-run）
+### macOS 本地开发环境
 
-## 安装与使用
+- 终端模拟器配置（Alacritty、Ghostty）
+- 开发工具配置（Vim、Tmux）
+- Shell 环境（Bash）
+- 包管理器（Homebrew）
 
-### 快速安装
+### Linux 服务器环境
+
+- 服务器优化配置
+- SSH 会话优化
+- 基础开发工具安装
+- 性能监控工具
+
+## 🚀 快速开始
+
+### macOS 安装
 
 ```bash
-git clone git@github.com:wacodespace/dotfiles.git ~/dotfiles && bash ~/dotfiles/install.sh
+# 克隆仓库
+git clone https://github.com/wacodespace/z-codespace.git
+cd z-codespace
+
+# 运行 macOS 安装脚本
+./install-macos.sh
+
+# 或强制覆盖（不备份）
+./install-macos.sh --force
 ```
 
-### 脚本选项
+### Linux 服务器安装
 
 ```bash
-# 正常安装（自动备份）
-bash ~/dotfiles/install.sh
+# 克隆仓库
+git clone https://github.com/wacodespace/z-codespace.git
+cd z-codespace
 
-# 强制覆盖（不备份）
-bash ~/dotfiles/install.sh --force
+# 运行 Linux 安装脚本
+./install-linux.sh
 
-# 预览模式（只显示操作，不执行）
-bash ~/dotfiles/install.sh --dry-run
-
-# 卸载（恢复备份）
-bash ~/dotfiles/install.sh --uninstall
-
-# 查看帮助
-bash ~/dotfiles/install.sh --help
+# 或强制覆盖（不备份）
+./install-linux.sh --force
 ```
 
-### 安装过程
+## 📁 目录结构
 
-1. 自动备份已有配置（加时间戳后缀）
-2. 创建符号链接指向仓库文件
-3. 设置 Git 全局 HTTPS → SSH 重写规则
+```text
+dotfiles/
+├── configs/
+│   ├── common/               # 通用配置
+│   │   ├── .bashrc          # Bash 配置（含平台检测）
+│   │   ├── .vimrc           # Vim 配置
+│   │   └── .tmux.conf       # Tmux 配置
+│   ├── macos/               # macOS 特定配置
+│   │   └── .config/
+│   │       ├── alacritty/
+│   │       │   └── alacritty.toml
+│   │       └── ghostty/
+│   │           └── config
+│   └── linux/               # Linux 特定配置
+│       └── .bash_server     # 服务器专用配置
+├── install-macos.sh          # macOS 安装脚本
+├── install-linux.sh          # Linux 安装脚本
+├── install.sh                # 原始安装脚本（兼容性）
+└── README.md                 # 本文档
+```
 
-安装后执行 `source ~/.bashrc` 或重新打开终端即可生效。
+## ⚙️ 配置说明
 
-### AI CLI 一键安装
+### 通用配置
 
-`.bashrc` 内置了安装与启动函数，可在新机器上直接安装并启动常用 AI 命令行工具：
+#### .bashrc
+
+- 跨平台别名（macOS/Linux）
+- Git 快捷键
+- 开发工具配置
+- 平台特定功能自动检测
+- AI CLI 工具集成（Claude Code、Codex）
+
+#### .vimrc
+
+- 语法高亮
+- 行号显示
+- 搜索配置
+- 缩进设置
+- `;` 作为 Leader 键
+
+#### .tmux.conf
+
+- `C-a` 前缀键
+- vi 模式 + hjkl 面板导航
+- 鼠标支持
+- 分屏保持当前路径
+
+### macOS 特定
+
+#### Alacritty 配置
+
+- Monokai 配色主题
+- 透明度设置
+- 字体优化（Menlo 19pt）
+
+#### Ghostty 配置
+
+- 与 Alacritty 相同的配色
+- 原生 macOS 集成
+- 性能优化
+
+### Linux 服务器特定
+
+#### .bash_server
+
+- SSH 会话优化
+- 服务器监控别名
+- 安全操作提醒
+- 快速导航命令
+
+## 🛠️ 功能特性
+
+### macOS
+
+- ✅ 自动安装 Homebrew
+- ✅ 自动安装终端应用
+- ✅ GUI 终端配置
+- ✅ 原生体验优化
+
+### Linux
+
+- ✅ 自动检测包管理器
+- ✅ 自动安装基础工具
+- ✅ SSH 环境优化
+- ✅ 服务器性能监控
+
+## 💡 使用提示
+
+### 备份机制
+
+- 安装脚本会自动备份现有配置
+- 备份文件格式：`.bak.YYYYMMDDHHMMSS`
+- 使用 `--force` 可跳过备份
+
+### AI CLI 工具
 
 ```bash
 # 安装 Claude Code
@@ -63,59 +161,10 @@ cc
 cx
 ```
 
-行为说明：
-
-- `icc`：安装 `Claude Code`
-- `icx`：安装 `Codex CLI`
-- `cc`：启动 `Claude Code`
-- `cx`：启动 `Codex CLI`
-- 若系统缺少 `nvm` / `node` / `npm`，会自动安装 `nvm` 并切换到 `Node.js LTS`
-- `icc` 优先尝试 Claude 官方原生安装脚本；若脚本因区域限制不可用或返回网页内容，会自动回退到 `npm` 安装
-- `icx` 通过 `npm install -g @openai/codex` 安装
-- `cc` / `cx` 会把附加参数原样透传给 `claude` / `codex`
-
-首次使用前请先加载配置：
+### 私有配置
 
 ```bash
-source ~/.bashrc
+# 复制模板并填写密钥
+cp ~/z-codespace/.bash_private.example ~/.bash_private
+vim ~/.bash_private
 ```
-
-安装完成后，可分别运行 `claude` 或 `codex` 继续完成登录/认证。
-
-## 私有配置（密钥）
-
-仓库中不存储任何密钥。涉及密钥的配置（如 OSS）通过 `~/.bash_private` 加载，该文件需在每台新机器上手动创建：
-
-```bash
-cp ~/dotfiles/.bash_private.example ~/.bash_private
-vim ~/.bash_private   # 填入真实密钥
-```
-
-`~/.bash_private` 已被 `.gitignore` 排除，不会意外提交到仓库。
-
-## 主要特性
-
-### .bashrc
-- 整理后的分组别名（导航、Git、GPU 监控、工具）
-- 去重后的 PATH
-- Git HTTPS → SSH 自动重写（`git config --global url."git@github.com:".insteadOf "https://github.com/"`)
-- docker → pouch 包装函数
-- `icc` / `icx` 一键安装 Claude Code 与 Codex CLI
-- `cc` / `cx` 快速启动 Claude Code 与 Codex CLI
-- 自动补齐 `nvm`、`Node.js LTS` 与 `npm` 运行环境
-
-### .tmux.conf
-- `C-a` 前缀键
-- vi 模式 + hjkl 面板导航
-- Alt+h/l 窗口切换
-- 鼠标支持
-- 分屏/新窗口保持当前路径
-- 清爽的状态栏
-
-### .vimrc
-- `;` 作为 Leader 键（`;q` 退出、`;w` 保存、`;l` 取消高亮）
-- 4 空格缩进、Tab 展开为空格
-- UTF-8 编码自动识别
-- 语法折叠（默认不折叠）
-- Tab/尾部空格可视化
-- 插件部分已注释（vim-plug + gruvbox + NERDTree + airline）
