@@ -57,6 +57,21 @@ backup_item() {
     fi
 }
 
+# --- 清理旧备份 ---
+cleanup_backups() {
+    local target="$1"
+    local pattern="${target}.bak.*"
+    local backups=($(ls -t $pattern 2>/dev/null))
+    local count=${#backups[@]}
+    
+    if [[ $count -gt 3 ]]; then
+        log_warn "清理旧备份，保留最近 3 个"
+        for ((i=3; i<count; i++)); do
+            run rm -rf "${backups[$i]}"
+        done
+    fi
+}
+
 # --- 创建符号链接 ---
 link_file() {
     local src="$1"
@@ -64,6 +79,7 @@ link_file() {
     
     if [[ "$FORCE" != "true" ]]; then
         backup_item "$dst"
+        cleanup_backups "$dst"
     fi
     
     log_info "链接 $src -> $dst"
