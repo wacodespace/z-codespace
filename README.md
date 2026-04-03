@@ -28,10 +28,10 @@ git clone https://github.com/wacodespace/z-codespace.git
 cd z-codespace
 
 # 运行 macOS 安装脚本
-./install-macos.sh
+./macos_install.sh
 
 # 或强制覆盖（不备份）
-./install-macos.sh --force
+./macos_install.sh --force
 ```
 
 ### Linux 服务器安装
@@ -42,10 +42,10 @@ git clone https://github.com/wacodespace/z-codespace.git
 cd z-codespace
 
 # 运行 Linux 安装脚本
-./install-linux.sh
+./linux_install.sh
 
 # 或强制覆盖（不备份）
-./install-linux.sh --force
+./linux_install.sh --force
 ```
 
 ## 📁 目录结构
@@ -65,8 +65,8 @@ dotfiles/
 │   │           └── config
 │   └── linux/               # Linux 特定配置
 │       └── .bash_server     # 服务器专用配置
-├── install-macos.sh          # macOS 安装脚本
-├── install-linux.sh          # Linux 安装脚本
+├── macos_install.sh          # macOS 安装脚本
+├── linux_install.sh          # Linux 安装脚本
 ├── install.sh                # 原始安装脚本（兼容性）
 └── README.md                 # 本文档
 ```
