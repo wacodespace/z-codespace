@@ -101,6 +101,14 @@ install_apps() {
     if ! command -v ghostty >/dev/null 2>&1; then
         log_macos "Ghostty 未安装，可通过 Homebrew 安装: brew install --cask ghostty"
     fi
+    
+    # Nerd Font（LazyVim 图标渲染需要）
+    if ! ls ~/Library/Fonts/MesloLG*NerdFont* &>/dev/null; then
+        log_macos "安装 MesloLG Nerd Font..."
+        brew install --cask font-meslo-lg-nerd-font
+    else
+        log_macos "MesloLG Nerd Font 已安装"
+    fi
 }
 
 # --- 主函数 ---
@@ -126,12 +134,6 @@ main() {
     log_macos "安装 macOS 特定配置..."
     link_file "$DOTFILES_DIR/configs/macos/.config/alacritty/alacritty.toml" "$HOME/.config/alacritty/alacritty.toml"
     link_file "$DOTFILES_DIR/configs/macos/.config/ghostty/config" "$HOME/.config/ghostty/config"
-    
-    # Git 配置
-    if ! git config --global --get "url.git@github.com:.insteadOf" >/dev/null 2>&1; then
-        log_macos "设置 Git HTTPS -> SSH 重写规则"
-        git config --global "url.git@github.com:".insteadOf "https://github.com/"
-    fi
     
     echo ""
     log_macos "macOS 环境配置完成！"

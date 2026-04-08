@@ -1,1 +1,7 @@
 .bash_private
+
+# 离线部署包
+nvim-offline-*.tar.gz
+
+# Neovim 本地插件配置（机器特定，不提交）
+configs/nvim/lua/plugins/local.lua

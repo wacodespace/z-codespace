@@ -7,9 +7,28 @@ case $- in
       *) return;;
 esac
 
-# --- 代理环境变量 ---
-# export HTTP_PROXY=http://127.0.0.1:1080
-# export HTTPS_PROXY=http://127.0.0.1:1080
+# --- 代理管理 ---
+# proxy  — 自动探测本地代理端口并设置环境变量
+# noproxy — 清除代理环境变量
+proxy() {
+    local ports=(7897 7890 1087 1080 8080)
+    for p in "${ports[@]}"; do
+        if curl -so /dev/null --connect-timeout 1 -x "http://127.0.0.1:$p" http://www.google.com 2>/dev/null; then
+            export HTTP_PROXY="http://127.0.0.1:$p"
+            export HTTPS_PROXY="http://127.0.0.1:$p"
+            export ALL_PROXY="socks5://127.0.0.1:$p"
+            export NO_PROXY="localhost,127.0.0.1,::1"
+            echo "proxy set → 127.0.0.1:$p"
+            return 0
+        fi
+    done
+    echo "no proxy found (tried: ${ports[*]})"
+    return 1
+}
+noproxy() {
+    unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY
+    echo "proxy cleared"
+}
 
 # --- 终端与颜色 ---
 export TERM=xterm-256color
@@ -107,6 +126,7 @@ gl() {
 gls() {
     git log --shortstat -"${1:-10}"
 }
+alias s='ssh'
 alias gp='git pull'
 alias gf='git diff'
 alias gs='git status'
@@ -160,8 +180,10 @@ docker() {
 # --- PATH (去重整理) ---
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
-# --- Git 全局配置: HTTPS → SSH ---
-git config --global url."git@github.com:".insteadOf "https://github.com/"
+# --- Git 全局配置: HTTPS → SSH (仅 Linux) ---
+if [[ "$(uname -s)" == "Linux" ]]; then
+    git config --global url."git@github.com:".insteadOf "https://github.com/"
+fi
 
 # --- Git 中文编码配置 ---
 git config --global core.quotepath false
