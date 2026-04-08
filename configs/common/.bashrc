@@ -167,7 +167,9 @@ alias rocm='rocm-smi --showuse --showmeminfo vram --showpids'
 alias wrocm='watch -n 0.1 rocm-smi --showuse --showmeminfo vram --showpids'
 
 # --- 工具别名 ---
-alias ossutil='ossutil_x86_64'
+if [[ "$(uname -s)" == "Linux" ]]; then
+    alias ossutil='ossutil_x86_64'
+fi
 alias pps='pip show'
 alias v3='rocprofv3'
 alias oss='ossutil64 -i $OSS_AK_ID -k $OSS_AK_SECRET -e ${OSS_ENDPOINT:-cn-zhangjiakou.oss.aliyuncs.com} cp'
