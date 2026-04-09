@@ -1,0 +1,122 @@
+name: Release Offline Bundle
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        default: 'v0.0.0-test'
+
+jobs:
+  build-linux-x86_64:
+    name: Build linux-x86_64
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          bash scripts/install-deps.sh
+
+      - name: Deploy LazyVim config & sync plugins
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          bash scripts/install-nvim.sh --force
+
+      - name: Pack offline bundle
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          bash scripts/offline-pack.sh "$HOME/nvim-offline-linux-x86_64.tar.gz"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nvim-offline-linux-x86_64
+          path: ~/nvim-offline-linux-x86_64.tar.gz
+          retention-days: 1
+
+  build-macos-arm64:
+    name: Build macos-arm64
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: bash scripts/install-deps.sh
+
+      - name: Deploy LazyVim config & sync plugins
+        run: bash scripts/install-nvim.sh --force
+
+      - name: Pack offline bundle
+        run: bash scripts/offline-pack.sh "$HOME/nvim-offline-macos-arm64.tar.gz"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nvim-offline-macos-arm64
+          path: ~/nvim-offline-macos-arm64.tar.gz
+          retention-days: 1
+
+  release:
+    name: Create GitHub Release
+    needs: [build-linux-x86_64, build-macos-arm64]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nvim-offline-linux-x86_64
+          path: ./dist
+
+      - name: Download macos artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nvim-offline-macos-arm64
+          path: ./dist
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "z-codespace ${{ steps.tag.outputs.tag }}"
+          body: |
+            ## 离线部署包
+
+            包含 LazyVim 配置 + 所有插件 + LSP 工具，目标机器无需联网。
+
+            ### 部署方式
+
+            ```bash
+            # 1. 下载对应平台的包
+            # 2. 解压
+            tar xzf nvim-offline-<platform>.tar.gz
+            # 3. 部署
+            bash nvim-bundle/deploy.sh
+            ```
+
+            > 注意：.so 文件平台相关，linux-x86_64 包不能用于 arm64 机器。
+          files: |
+            dist/nvim-offline-linux-x86_64.tar.gz
+            dist/nvim-offline-macos-arm64.tar.gz
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
