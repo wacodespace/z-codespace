@@ -18,7 +18,7 @@
 -- │ 语言      │ LSP              │ 安装方式                    │ 离线可用 │
 -- ├───────────┼──────────────────┼─────────────────────────────┼──────────┤
 -- │ Python    │ pyright          │ mason / npm                 │ 是*      │
--- │ C/C++     │ clangd           │ 系统包管理器 (推荐)         │ 是       │
+-- │ C/C++     │ clangd           │ 系统包管理器 (推荐)          .  是       │
 -- │ Lua       │ lua_ls           │ mason / GitHub release      │ 是*      │
 -- │ Bash      │ bashls           │ mason / npm                 │ 是*      │
 -- │ JSON      │ jsonls           │ mason                       │ 是*      │
