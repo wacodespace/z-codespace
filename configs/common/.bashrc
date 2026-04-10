@@ -328,3 +328,96 @@ cc() {
 cx() {
     codex "$@"
 }
+
+# 服务器特定配置
+# Linux 服务器特定配置
+
+# SSH 会话优化
+if [[ -n "$SSH_CLIENT" || -n "$SSH_TTY" ]]; then
+    # 设置终端标题为 user@host:dir
+    case "$TERM" in
+        xterm*|rxvt*)
+            PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+            ;;
+    esac
+    
+    # 防止 SSH 会话挂起
+    export TMOUT=0
+    
+    # 服务器提示符优化
+    PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+fi
+
+# 服务器性能监控别名
+alias ps='ps aux'
+alias du='du -h'
+alias df='df -h'
+alias top='htop'  # 如果安装了 htop
+
+# 网络工具别名
+alias myip='curl -s ifconfig.me'
+alias ports='netstat -tuln'
+
+# 快速导航
+alias cdw='cd /var/www'
+alias cdl='cd /var/log'
+alias cdc='cd /etc'
+
+# 安全操作提醒
+alias rm='rm -I'
+alias cp='cp -i'
+alias mv='mv -i'
+
+# 服务器信息
+alias about='echo "系统: $(uname -s)" && echo "版本: $(uname -r)" && echo "架构: $(uname -m)" && echo "在线: $(uptime -p)"'
+
+# Git 本地用户配置
+alias gsn='git config user.name "acodespace"'
+alias gse='git config user.email "7epimenides@gmail.com"'
+alias gsu='git config user.name "acodespace" && git config user.email "7epimenides@gmail.com" && echo "Git 用户配置完成: acodespace <7epimenides@gmail.com>"'
+alias gclun='git config --local user.name'
+alias gclue='git config --local user.email'
+alias gcgun='git config --global user.name'
+alias gcgue='git config --global user.email'
+
+# 服务器特定配置
+# Linux 服务器特定配置
+
+# SSH 会话优化
+if [[ -n "$SSH_CLIENT" || -n "$SSH_TTY" ]]; then
+    # 设置终端标题为 user@host:dir
+    case "$TERM" in
+        xterm*|rxvt*)
+            PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+            ;;
+    esac
+    
+    # 防止 SSH 会话挂起
+    export TMOUT=0
+    
+    # 服务器提示符优化
+    PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+fi
+
+# 服务器性能监控别名
+alias ps='ps aux'
+alias du='du -h'
+alias df='df -h'
+alias top='htop'  # 如果安装了 htop
+
+# 网络工具别名
+alias myip='curl -s ifconfig.me'
+alias ports='netstat -tuln'
+
+# 快速导航
+alias cdw='cd /var/www'
+alias cdl='cd /var/log'
+alias cdc='cd /etc'
+
+# 安全操作提醒
+alias rm='rm -I'
+alias cp='cp -i'
+alias mv='mv -i'
+
+# 服务器信息
+alias about='echo "系统: $(uname -s)" && echo "版本: $(uname -r)" && echo "架构: $(uname -m)" && echo "在线: $(uptime -p)"'
