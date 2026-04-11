@@ -182,6 +182,12 @@ docker() {
 # --- PATH (去重整理) ---
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
+# --- npm 全局安装目录（避免 sudo）---
+mkdir -p "$HOME/.npm-global"
+if command -v npm >/dev/null 2>&1; then
+    npm config set prefix "$HOME/.npm-global" 2>/dev/null || true
+fi
+
 # --- Git 全局配置: HTTPS → SSH (仅 Linux) ---
 if [[ "$(uname -s)" == "Linux" ]]; then
     git config --global url."git@github.com:".insteadOf "https://github.com/"
