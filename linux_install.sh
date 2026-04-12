@@ -162,6 +162,10 @@ main() {
     link_file "$DOTFILES_DIR/configs/common/.bashrc" "$HOME/.bashrc"
     link_file "$DOTFILES_DIR/configs/common/.vimrc" "$HOME/.vimrc"
     link_file "$DOTFILES_DIR/configs/common/.tmux.conf" "$HOME/.tmux.conf"
+    if [[ -f "$DOTFILES_DIR/configs/linux/.config/alacritty/alacritty.toml" ]]; then
+        link_file "$DOTFILES_DIR/configs/common/.config/alacritty/shared.toml" "$HOME/.config/alacritty/shared.toml"
+        link_file "$DOTFILES_DIR/configs/linux/.config/alacritty/alacritty.toml" "$HOME/.config/alacritty/alacritty.toml"
+    fi
     
     # 设置服务器环境
     setup_server_env
@@ -180,6 +184,7 @@ main() {
     echo "  - 使用 tmux 进行会话管理: tmux new -s session_name"
     echo "  - 服务器已优化 SSH 体验"
     echo "  - 基础工具已安装: vim, tmux, git, htop"
+    echo "  - Alacritty 配置已安装到 ~/.config/alacritty/（如果仓库内存在 Linux 配置）"
 }
 
 main "$@"

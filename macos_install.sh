@@ -132,6 +132,7 @@ main() {
     
     # 安装 macOS 特定配置
     log_macos "安装 macOS 特定配置..."
+    link_file "$DOTFILES_DIR/configs/common/.config/alacritty/shared.toml" "$HOME/.config/alacritty/shared.toml"
     link_file "$DOTFILES_DIR/configs/macos/.config/alacritty/alacritty.toml" "$HOME/.config/alacritty/alacritty.toml"
     link_file "$DOTFILES_DIR/configs/macos/.config/ghostty/config" "$HOME/.config/ghostty/config"
     

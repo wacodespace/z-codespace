@@ -19,6 +19,10 @@ return {
   -- 运行时不需要外网 | 安装时需要外网 (git clone) | 无外部二进制依赖
   {
     "christoomey/vim-tmux-navigator",
+    init = function()
+      -- Keep only the explicit C-h/j/k/l mappings below and avoid clobbering C-\ for ToggleTerm.
+      vim.g.tmux_navigator_no_mappings = 1
+    end,
     keys = {
       { "<C-h>", "<cmd>TmuxNavigateLeft<cr>",  desc = "切换到左窗格" },
       { "<C-j>", "<cmd>TmuxNavigateDown<cr>",  desc = "切换到下窗格" },

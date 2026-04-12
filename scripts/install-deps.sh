@@ -22,6 +22,7 @@
 #   tmux       — 终端复用
 #   lazygit    — Git TUI
 #   xclip/xsel — Linux 系统剪贴板支持
+#   claude     — Claude Code CLI，供 claudecode.nvim 插件联动
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -187,7 +188,6 @@ install_fd_binary() {
     log_ok "fd 安装到 ~/.local/bin/fd"
 }
 
-# --- 安装 Neovim (Linux，下载预编译二进制到 ~/.local) ---
 # --- 构建 Neovim 下载地址列表 ---
 # 可通过环境变量配置镜像，避免中国区服务器直接访问 GitHub Releases 过慢:
 #   NVIM_DOWNLOAD_BASE=https://your-mirror.example.com/neovim
@@ -234,6 +234,7 @@ download_with_fallback() {
     return 1
 }
 
+# --- 安装 Neovim (Linux，下载预编译二进制到 ~/.local) ---
 install_nvim_linux() {
     if has_cmd nvim && check_nvim_version "$NVIM_MIN_VERSION"; then
         log_ok "Neovim 已安装: $(nvim --version | head -n1)"
@@ -258,8 +259,8 @@ install_nvim_linux() {
     esac
 
     local tmpdir
-    tmpdir=$(mktemp -d)
     local urls=()
+    tmpdir=$(mktemp -d)
 
     while IFS= read -r url; do
         urls+=("$url")
@@ -290,6 +291,30 @@ install_nvim_linux() {
     else
         log_error "Neovim 安装失败"
         return 1
+    fi
+}
+
+# --- 安装 Claude Code CLI (供 claudecode.nvim 插件联动) ---
+# 非致命：失败只输出警告，不中断整个安装流程
+install_claude_cli() {
+    if has_cmd claude; then
+        log_ok "Claude Code CLI 已安装: $(claude --version 2>/dev/null | head -n1)"
+        return 0
+    fi
+
+    if ! has_cmd npm; then
+        log_warn "未找到 npm，跳过 Claude Code CLI 安装"
+        log_warn "如需使用 nvim 的 claudecode.nvim 插件，请手动安装:"
+        log_warn "  npm install -g @anthropic-ai/claude-code"
+        return 0
+    fi
+
+    log_step "安装 Claude Code CLI (@anthropic-ai/claude-code)..."
+    if npm install -g @anthropic-ai/claude-code; then
+        log_ok "Claude Code CLI 安装完成: $(claude --version 2>/dev/null | head -n1)"
+    else
+        log_warn "Claude Code CLI 安装失败（可能需要 sudo 或配置 npm 全局前缀）"
+        log_warn "手动安装: npm install -g @anthropic-ai/claude-code"
     fi
 }
 
@@ -330,6 +355,10 @@ main() {
             exit 1
             ;;
     esac
+
+    # 可选: 安装 Claude Code CLI (非致命)
+    echo ""
+    install_claude_cli
 
     echo ""
     log_ok "依赖安装完成。"

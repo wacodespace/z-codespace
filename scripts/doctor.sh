@@ -34,6 +34,7 @@ check_cmd() {
             tmux)    ver=$($cmd -V 2>/dev/null) ;;
             npm)     ver=$($cmd --version 2>/dev/null) ;;
             pip3)    ver=$($cmd --version 2>/dev/null) ;;
+            claude)  ver=$($cmd --version 2>/dev/null | head -n1) ;;
             *)       ver="found" ;;
         esac
         log_ok "$cmd: $ver"
@@ -170,6 +171,7 @@ main() {
     check_cmd lazygit false "Git TUI"
     check_cmd npm     false "Node 包管理"
     check_cmd pip3    false "Python 包管理"
+    check_cmd claude  false "Claude Code CLI (claudecode.nvim 插件依赖)"
     echo ""
 
     log_step "--- 配置状态 ---"

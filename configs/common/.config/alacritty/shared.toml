@@ -1,0 +1,35 @@
+[general]
+live_config_reload = true
+
+[window]
+padding = { x = 5, y = 5 }
+decorations = "full"
+opacity = 0.75
+
+[window.dimensions]
+columns = 120
+lines = 40
+
+[colors.primary]
+background = "#272822"
+foreground = "#F8F8F2"
+
+[colors.normal]
+black = "#75715E"
+red = "#F92672"
+green = "#A6E22E"
+yellow = "#F4BF75"
+blue = "#66D9EF"
+magenta = "#AE81FF"
+cyan = "#2AA198"
+white = "#F9F8F5"
+
+[colors.bright]
+black = "#272822"
+red = "#F92672"
+green = "#A6E22E"
+yellow = "#F4BF75"
+blue = "#66D9EF"
+magenta = "#AE81FF"
+cyan = "#2AA198"
+white = "#F8F8F2"
