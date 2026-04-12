@@ -33,7 +33,7 @@ ARCH="$(detect_arch)"
 
 # Neovim 版本
 NVIM_MIN_VERSION="0.9.0"
-NVIM_STABLE_VERSION="0.10.4"
+NVIM_STABLE_VERSION="0.11.5"
 
 # ============================================================
 # macOS 安装
@@ -188,6 +188,52 @@ install_fd_binary() {
 }
 
 # --- 安装 Neovim (Linux，下载预编译二进制到 ~/.local) ---
+# --- 构建 Neovim 下载地址列表 ---
+# 可通过环境变量配置镜像，避免中国区服务器直接访问 GitHub Releases 过慢:
+#   NVIM_DOWNLOAD_BASE=https://your-mirror.example.com/neovim
+#   NVIM_DOWNLOAD_MIRRORS="https://mirror-a.example.com/neovim https://mirror-b.example.com/neovim"
+#
+# 约定:
+#   1. 镜像目录下保留官方文件名，例如 nvim-linux-x86_64.tar.gz
+#   2. 会自动回退到 GitHub 官方 Releases
+build_nvim_download_urls() {
+    local filename="$1"
+    local urls=()
+    local base
+
+    if [ -n "${NVIM_DOWNLOAD_BASE:-}" ]; then
+        urls+=("${NVIM_DOWNLOAD_BASE%/}/${filename}")
+    fi
+
+    if [ -n "${NVIM_DOWNLOAD_MIRRORS:-}" ]; then
+        # shellcheck disable=SC2206
+        local mirrors=(${NVIM_DOWNLOAD_MIRRORS})
+        for base in "${mirrors[@]}"; do
+            urls+=("${base%/}/${filename}")
+        done
+    fi
+
+    urls+=("https://github.com/neovim/neovim/releases/download/v${NVIM_STABLE_VERSION}/${filename}")
+    printf '%s\n' "${urls[@]}"
+}
+
+download_with_fallback() {
+    local output="$1"
+    shift
+
+    local url
+    for url in "$@"; do
+        [ -n "$url" ] || continue
+        log_info "尝试下载: $url"
+        if curl -fL --connect-timeout 10 --retry 3 --retry-delay 2 "$url" -o "$output"; then
+            return 0
+        fi
+        log_warn "下载失败，尝试下一个源"
+    done
+
+    return 1
+}
+
 install_nvim_linux() {
     if has_cmd nvim && check_nvim_version "$NVIM_MIN_VERSION"; then
         log_ok "Neovim 已安装: $(nvim --version | head -n1)"
@@ -197,13 +243,13 @@ install_nvim_linux() {
     log_step "安装 Neovim v${NVIM_STABLE_VERSION} 到 ~/.local ..."
     mkdir -p "$HOME/.local/bin"
 
-    local url
+    local filename
     case "$ARCH" in
         x86_64)
-            url="https://github.com/neovim/neovim/releases/download/v${NVIM_STABLE_VERSION}/nvim-linux-x86_64.tar.gz"
+            filename="nvim-linux-x86_64.tar.gz"
             ;;
         arm64)
-            url="https://github.com/neovim/neovim/releases/download/v${NVIM_STABLE_VERSION}/nvim-linux-arm64.tar.gz"
+            filename="nvim-linux-arm64.tar.gz"
             ;;
         *)
             log_error "不支持的架构: $ARCH"
@@ -213,8 +259,18 @@ install_nvim_linux() {
 
     local tmpdir
     tmpdir=$(mktemp -d)
-    log_info "下载: $url"
-    curl -fsSL "$url" -o "$tmpdir/nvim.tar.gz"
+    local urls=()
+
+    while IFS= read -r url; do
+        urls+=("$url")
+    done < <(build_nvim_download_urls "$filename")
+
+    if ! download_with_fallback "$tmpdir/nvim.tar.gz" "${urls[@]}"; then
+        log_error "Neovim 下载失败。可通过 NVIM_DOWNLOAD_BASE 或 NVIM_DOWNLOAD_MIRRORS 指定国内/内网镜像"
+        rm -rf "$tmpdir"
+        return 1
+    fi
+
     tar xzf "$tmpdir/nvim.tar.gz" -C "$tmpdir"
 
     # 找到解压后的目录并复制到 ~/.local
