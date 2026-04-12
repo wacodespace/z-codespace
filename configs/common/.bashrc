@@ -192,10 +192,13 @@ docker() {
 # --- PATH (去重整理) ---
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
-# --- npm 全局安装目录（避免 sudo）---
-mkdir -p "$HOME/.npm-global"
-if command -v npm >/dev/null 2>&1; then
-    npm config set prefix "$HOME/.npm-global" 2>/dev/null || true
+# --- npm 全局安装目录（避免 sudo，但与 nvm 不兼容）---
+# 仅在未使用 nvm 时设置，避免与 nvm 的 prefix 管理冲突
+if [ -z "${NVM_DIR:-}" ] && [ ! -d "$HOME/.nvm" ]; then
+    mkdir -p "$HOME/.npm-global"
+    if command -v npm >/dev/null 2>&1; then
+        npm config set prefix "$HOME/.npm-global" 2>/dev/null || true
+    fi
 fi
 
 # --- Git 全局配置: HTTPS → SSH (仅 Linux) ---
