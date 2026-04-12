@@ -11,9 +11,8 @@ map("n", "<leader>q", "<cmd>q<cr>", { desc = "退出" })
 -- 清除搜索高亮
 map("n", "<leader>l", "<cmd>nohlsearch<cr>", { desc = "清除高亮" })
 
--- 快速移动到行首行尾
-map({ "n", "v" }, "H", "^", { desc = "行首" })
-map({ "n", "v" }, "L", "$", { desc = "行尾" })
+-- H/L 保留 LazyVim 默认：S-h 上一个 buffer, S-l 下一个 buffer
+-- 行首行尾用原生 ^ / $ 或 S-i / S-a
 
 -- 可视模式下移动行
 map("v", "J", ":m '>+1<CR>gv=gv", { desc = "下移行" })
