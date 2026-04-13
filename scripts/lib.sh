@@ -135,7 +135,7 @@ safe_link() {
 
 # --- 检查最低 Neovim 版本 ---
 check_nvim_version() {
-    local required="${1:-0.9.0}"
+    local required="${1:-0.11.2}"
     if ! has_cmd nvim; then
         return 1
     fi
