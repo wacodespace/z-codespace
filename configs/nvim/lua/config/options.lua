@@ -49,7 +49,6 @@ opt.completeopt = "menu,menuone,noselect"
 opt.termguicolors = true
 
 -- 配色方案
-vim.cmd.colorscheme("catppuccin")
 
 -- 禁用 swap（持久化撤销已足够）
 opt.swapfile = false
