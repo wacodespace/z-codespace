@@ -32,7 +32,7 @@ require("lazy").setup({
   },
   install = {
     -- 首次安装时使用的配色
-    colorscheme = { "catppuccin" },
+    colorscheme = { "tokyonight" },
   },
   checker = {
     -- 禁止自动检查插件更新（稳定优先，手动控制升级）
