@@ -15,6 +15,7 @@ OS="$(detect_os)"
 
 NVIM_CONFIG_SRC="$PROJECT_ROOT/configs/nvim"
 NVIM_CONFIG_DST="$HOME/.config/nvim"
+NVIM_MIN_VERSION="0.11.2"
 
 FORCE=false
 NO_SYNC=false
@@ -51,6 +52,13 @@ main() {
     if ! has_cmd nvim; then
         log_error "未找到 nvim。请先运行:"
         log_error "  bash scripts/install-deps.sh"
+        exit 1
+    fi
+    if ! check_nvim_version "$NVIM_MIN_VERSION"; then
+        log_error "当前 nvim 版本过低: $(nvim --version | head -n1)"
+        log_error "需要 >= ${NVIM_MIN_VERSION}。请先运行:"
+        log_error "  bash scripts/install-deps.sh"
+        log_error "若已安装到 ~/.local/bin，请确认 PATH 包含: $HOME/.local/bin"
         exit 1
     fi
     log_ok "Neovim: $(nvim --version | head -n1)"

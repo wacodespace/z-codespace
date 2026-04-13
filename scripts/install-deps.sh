@@ -33,7 +33,7 @@ OS="$(detect_os)"
 ARCH="$(detect_arch)"
 
 # Neovim 版本
-NVIM_MIN_VERSION="0.9.0"
+NVIM_MIN_VERSION="0.11.2"
 NVIM_STABLE_VERSION="0.11.5"
 
 # ============================================================
@@ -362,6 +362,15 @@ main() {
 
     echo ""
     log_ok "依赖安装完成。"
+    echo ""
+    if has_cmd nvim; then
+        if check_nvim_version "$NVIM_MIN_VERSION"; then
+            log_ok "当前生效的 Neovim: $(nvim --version | head -n1)"
+        else
+            log_warn "当前 PATH 中的 nvim 仍低于 ${NVIM_MIN_VERSION}: $(nvim --version | head -n1)"
+            log_warn "请确认 ~/.local/bin 已加入 PATH，或直接使用: $HOME/.local/bin/nvim"
+        fi
+    fi
     echo ""
     log_info "请确保 ~/.local/bin 在 PATH 中:"
     log_info "  export PATH=\"\$HOME/.local/bin:\$PATH\""
