@@ -17,4 +17,10 @@ return {
 
   -- 禁用 indent scope 动画（减少视觉干扰）
   -- { "echasnovski/mini.indentscope", enabled = false },
+
+  -- 禁用 fzf-lua（已统一使用 snacks picker）
+  { "ibhagwan/fzf-lua", enabled = false },
+
+  -- 禁用 catppuccin（已切换为 monokai-pro）
+  { "catppuccin", enabled = false },
 }

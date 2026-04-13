@@ -34,7 +34,7 @@ return {
   -- mason: 管理 LSP / 格式化 / Lint 工具安装
   -- 注意: 在无网环境中应使用系统包管理器替代 mason
   {
-    "williamboman/mason.nvim",
+    "mason-org/mason.nvim",
     opts = {
       ensure_installed = {
         -- LSP (extras 未覆盖的)
@@ -74,6 +74,13 @@ return {
                 typeCheckingMode = "basic",
                 autoSearchPaths = true,
                 useLibraryCodeForTypes = true,
+                -- 减少 torch/tensor 常见误报
+                diagnosticSeverityOverrides = {
+                  reportAttributeAccessIssue = "none",
+                  reportOperatorIssue = "none",
+                  reportReturnType = "none",
+                  reportArgumentType = "warning",
+                },
               },
             },
           },

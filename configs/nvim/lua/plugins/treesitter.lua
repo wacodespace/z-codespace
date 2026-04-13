@@ -54,6 +54,9 @@ return {
       },
       -- 禁止自动安装未列出的 parser
       auto_install = false,
+      -- Ubuntu 22.04 glibc=2.35，tree-sitter CLI 要求 glibc>=2.39
+      -- 改用 gcc 直接编译，绕过 tree-sitter CLI
+      compilers = { "gcc" },
       highlight = {
         enable = true,
         -- 大文件禁用高亮（防卡顿）
