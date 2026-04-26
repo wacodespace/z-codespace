@@ -110,18 +110,18 @@ install_packages() {
         apt)
             log_linux "使用 apt 安装软件..."
             sudo apt-get update
-            sudo apt-get install -y vim tmux curl wget git htop
+            sudo apt-get install -y vim tmux curl wget git htop openssh-client
             ;;
         yum|dnf)
             log_linux "使用 $pkg_manager 安装软件..."
-            sudo $pkg_manager install -y vim tmux curl wget git htop
+            sudo $pkg_manager install -y vim tmux curl wget git htop openssh-clients
             ;;
         pacman)
             log_linux "使用 pacman 安装软件..."
-            sudo pacman -Sy --noconfirm vim tmux curl wget git htop
+            sudo pacman -Sy --noconfirm vim tmux curl wget git htop openssh
             ;;
         *)
-            log_warn "未识别的包管理器，请手动安装: vim tmux curl wget git htop"
+            log_warn "未识别的包管理器，请手动安装: vim tmux curl wget git htop openssh-client"
             ;;
     esac
 }
@@ -159,6 +159,7 @@ main() {
     
     # 安装配置文件
     log_info "安装配置文件..."
+    link_file "$DOTFILES_DIR/configs/common/.bash_profile" "$HOME/.bash_profile"
     link_file "$DOTFILES_DIR/configs/common/.bashrc" "$HOME/.bashrc"
     link_file "$DOTFILES_DIR/configs/common/.vimrc" "$HOME/.vimrc"
     link_file "$DOTFILES_DIR/configs/common/.tmux.conf" "$HOME/.tmux.conf"
@@ -169,6 +170,10 @@ main() {
     
     # 设置服务器环境
     setup_server_env
+
+    # SSH key
+    log_linux "检查 SSH key..."
+    bash "$DOTFILES_DIR/scripts/setup-ssh.sh"
     
     # Git 配置
     if ! git config --global --get "url.git@github.com:.insteadOf" >/dev/null 2>&1; then
@@ -183,7 +188,8 @@ main() {
     echo "提示："
     echo "  - 使用 tmux 进行会话管理: tmux new -s session_name"
     echo "  - 服务器已优化 SSH 体验"
-    echo "  - 基础工具已安装: vim, tmux, git, htop"
+    echo "  - 基础工具已安装: vim, tmux, git, htop, OpenSSH client"
+    echo "  - SSH key 已检查；如新生成，请把公钥添加到 GitHub"
     echo "  - Alacritty 配置已安装到 ~/.config/alacritty/（如果仓库内存在 Linux 配置）"
 }
 

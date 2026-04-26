@@ -121,6 +121,20 @@ check_path() {
     fi
 }
 
+# --- 检查 SSH key ---
+check_ssh_key() {
+    local key
+    for key in "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_ecdsa"; do
+        if [ -f "$key" ] && [ -f "$key.pub" ]; then
+            log_ok "SSH key: $key"
+            return 0
+        fi
+    done
+
+    log_warn "未找到常见 SSH key，可运行: bash scripts/setup-ssh.sh"
+    WARNINGS=$((WARNINGS + 1))
+}
+
 # --- 检查 mason 工具 ---
 check_mason() {
     local mason_dir="$HOME/.local/share/nvim/mason/bin"
@@ -178,6 +192,7 @@ main() {
     check_nvim_config
     check_lazy_lock
     check_path
+    check_ssh_key
     echo ""
 
     log_step "--- 运行时数据 ---"

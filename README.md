@@ -109,6 +109,7 @@ bash nvim-bundle/deploy.sh
 z-codespace/
 ├── configs/
 │   ├── common/                  # 通用配置
+│   │   ├── .bash_profile       #   Bash 登录 shell 入口，加载 .bashrc
 │   │   ├── .bashrc             #   Bash (含平台检测 / Git 别名 / AI CLI)
 │   │   ├── .vimrc              #   Vim
 │   │   └── .tmux.conf          #   Tmux (含 nvim 无缝导航)
@@ -123,6 +124,7 @@ z-codespace/
 │           └── plugins/         #   插件配置 (editor/lang/treesitter)
 ├── scripts/                     # 自动化脚本
 │   ├── lib.sh                   #   共享工具函数
+│   ├── setup-ssh.sh             #   自动检查 / 生成 SSH key
 │   ├── install-deps.sh          #   安装依赖 (nvim/rg/fd/node...)
 │   ├── install-nvim.sh          #   部署 LazyVim 配置
 │   ├── uninstall-nvim.sh        #   卸载
@@ -193,6 +195,15 @@ bash scripts/doctor.sh
 - Git 快捷键 (输入 `gg` 查看)
 - GPU 监控别名 (NVIDIA: `nv` / AMD: `rc`)
 - AI CLI 工具集成 (`icc` 安装 Claude Code, `icx` 安装 Codex)
+
+### SSH key
+
+macOS / Linux 基础安装都会执行 `scripts/setup-ssh.sh`：
+
+- 已存在 `~/.ssh/id_ed25519` / `id_rsa` / `id_ecdsa` 时直接复用
+- 不存在时自动生成 `~/.ssh/id_ed25519`
+- 尝试把 `github.com` 加入 `~/.ssh/known_hosts`
+- 输出公钥，方便添加到 GitHub 的 SSH keys
 
 ### 私有配置
 

@@ -126,6 +126,7 @@ main() {
     
     # 安装通用配置
     log_info "安装通用配置..."
+    link_file "$DOTFILES_DIR/configs/common/.bash_profile" "$HOME/.bash_profile"
     link_file "$DOTFILES_DIR/configs/common/.bashrc" "$HOME/.bashrc"
     link_file "$DOTFILES_DIR/configs/common/.vimrc" "$HOME/.vimrc"
     link_file "$DOTFILES_DIR/configs/common/.tmux.conf" "$HOME/.tmux.conf"
@@ -135,6 +136,10 @@ main() {
     link_file "$DOTFILES_DIR/configs/common/.config/alacritty/shared.toml" "$HOME/.config/alacritty/shared.toml"
     link_file "$DOTFILES_DIR/configs/macos/.config/alacritty/alacritty.toml" "$HOME/.config/alacritty/alacritty.toml"
     link_file "$DOTFILES_DIR/configs/macos/.config/ghostty/config" "$HOME/.config/ghostty/config"
+
+    # SSH key
+    log_macos "检查 SSH key..."
+    bash "$DOTFILES_DIR/scripts/setup-ssh.sh"
     
     echo ""
     log_macos "macOS 环境配置完成！"
@@ -143,6 +148,7 @@ main() {
     echo "提示："
     echo "  - Alacritty 配置已安装到 ~/.config/alacritty/"
     echo "  - Ghostty 配置已安装到 ~/.config/ghostty/"
+    echo "  - SSH key 已检查；如新生成，请把公钥添加到 GitHub"
     echo "  - 使用 'brew install --cask <app>' 安装其他应用"
 }
 
