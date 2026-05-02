@@ -332,12 +332,66 @@ _install_codex() {
     return 1
 }
 
+_uninstall_npm_global() {
+    local package_name="$1"
+    local command_name="$2"
+
+    if ! command -v npm >/dev/null 2>&1; then
+        printf '%s\n' "未找到 npm，无法卸载 $package_name。" >&2
+        return 1
+    fi
+
+    npm uninstall -g "$package_name" || return 1
+    hash -r
+    if command -v "$command_name" >/dev/null 2>&1; then
+        printf '%s\n' "$command_name 仍存在：$(command -v "$command_name")"
+        return 1
+    fi
+    printf '%s\n' "$command_name 已卸载。"
+}
+
+_uninstall_claude_code() {
+    local claude_path=""
+    claude_path="$(command -v claude 2>/dev/null || true)"
+
+    if [ -z "$claude_path" ]; then
+        printf '%s\n' "claude 未安装。"
+        return 0
+    fi
+
+    if command -v npm >/dev/null 2>&1 && npm list -g @anthropic-ai/claude-code >/dev/null 2>&1; then
+        _uninstall_npm_global "@anthropic-ai/claude-code" "claude"
+        return $?
+    fi
+
+    printf '%s\n' "claude 存在，但未检测到 npm 全局包：$claude_path"
+    printf '%s\n' "如果它来自 Claude 原生安装器，请使用官方卸载方式或手动检查安装目录。"
+    return 1
+}
+
+_uninstall_codex() {
+    if ! command -v codex >/dev/null 2>&1; then
+        printf '%s\n' "codex 未安装。"
+        return 0
+    fi
+
+    _uninstall_npm_global "@openai/codex" "codex"
+}
+
 icc() {
     _install_claude_code
 }
 
 icx() {
     _install_codex
+}
+
+ucc() {
+    _uninstall_claude_code
+}
+
+ucx() {
+    _uninstall_codex
 }
 
 cc() {

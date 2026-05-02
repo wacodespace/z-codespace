@@ -194,7 +194,7 @@ bash scripts/doctor.sh
 - 跨平台别名（macOS/Linux）
 - Git 快捷键 (输入 `gg` 查看)
 - GPU 监控别名 (NVIDIA: `nv` / AMD: `rc`)
-- AI CLI 工具集成 (`icc` 安装 Claude Code, `icx` 安装 Codex)
+- AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex)
 
 ### SSH key
 
