@@ -123,6 +123,9 @@ alias g='git'
 gl() {
     git log --oneline -"${1:-10}"
 }
+glt() {
+    git log -n "${1:-10}" --date=format:'%Y-%m-%d %H:%M' --pretty=format:'%C(yellow)%h%Creset %Cgreen%ad%Creset %s'
+}
 gls() {
     git log --shortstat -"${1:-10}"
 }
@@ -136,7 +139,7 @@ alias gb='git branch'
 alias gc='git checkout'
 alias gclone='git clone --recursive'
 alias gcl='git clone --recurse-submodules'
-alias glt='git reflog --date=short'
+alias grl='git reflog --date=short'
 alias gamd='git commit --amend --no-edit'
 alias gpuf='git push --force-with-lease'
 alias gfs='git diff --stat --'
@@ -155,10 +158,11 @@ gcm() {
 gg() {
     printf '%s\n' "=== Git 快捷键（本文件）===" ""
     printf '%s\n' "别名:"
-    alias | grep -E "^alias (g|gp|gf|gs|gss|gsw|gb|gc|gclone|gcl|glt|gamd|gpuf|gfs|gfn)='" | sed 's/^/  /' | sort
+    alias | grep -E "^alias (g|gp|gf|gs|gss|gsw|gb|gc|gclone|gcl|grl|gamd|gpuf|gfs|gfn)='" | sed 's/^/  /' | sort
     printf '%s\n' "" "函数:"
     printf '%s\n' \
         "  gl [N]     git log --oneline（省略 N 时默认 10 条）" \
+        "  glt [N]    git log 带提交时间（省略 N 时默认 10 条）" \
         "  gls [N]    git log --shortstat（省略 N 时默认 10 条）" \
         "  gcm 'msg'  先 git pull 再 git commit -m（避免冲突）" \
         "" \
