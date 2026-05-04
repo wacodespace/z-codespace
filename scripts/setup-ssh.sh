@@ -8,6 +8,7 @@ KEY_FILE="${SSH_KEY_FILE:-$HOME/.ssh/id_ed25519}"
 KEY_TYPE="${SSH_KEY_TYPE:-ed25519}"
 KEY_COMMENT="${SSH_KEY_COMMENT:-}"
 KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
+SSH_CONFIG_FILE="$HOME/.ssh/config"
 
 log_info() { printf '\033[0;32m[INFO]\033[0m  %s\n' "$*"; }
 log_warn() { printf '\033[1;33m[WARN]\033[0m  %s\n' "$*"; }
@@ -49,6 +50,36 @@ ensure_ssh_dir() {
     chmod 700 "$HOME/.ssh"
 }
 
+ensure_github_ssh_config() {
+    touch "$SSH_CONFIG_FILE"
+    chmod 600 "$SSH_CONFIG_FILE"
+
+    if awk '
+        /^[[:space:]]*Host[[:space:]]+/ {
+            for (i = 2; i <= NF; i++) {
+                if ($i == "github.com") {
+                    found = 1
+                }
+            }
+        }
+        END { exit(found ? 0 : 1) }
+    ' "$SSH_CONFIG_FILE"; then
+        log_ok "SSH config 已包含 github.com"
+        return 0
+    fi
+
+    log_info "配置 GitHub SSH 走 443 端口"
+    {
+        echo ""
+        echo "Host github.com"
+        echo "  HostName ssh.github.com"
+        echo "  User git"
+        echo "  Port 443"
+        echo "  IdentityFile ~/.ssh/id_ed25519"
+        echo "  IdentitiesOnly yes"
+    } >> "$SSH_CONFIG_FILE"
+}
+
 generate_key() {
     local comment="$1"
 
@@ -80,14 +111,14 @@ ensure_github_known_host() {
     touch "$KNOWN_HOSTS_FILE"
     chmod 600 "$KNOWN_HOSTS_FILE"
 
-    if ssh-keygen -F github.com -f "$KNOWN_HOSTS_FILE" >/dev/null 2>&1; then
-        log_ok "GitHub known_hosts 已存在"
+    if ssh-keygen -F '[ssh.github.com]:443' -f "$KNOWN_HOSTS_FILE" >/dev/null 2>&1; then
+        log_ok "GitHub SSH known_hosts 已存在"
         return 0
     fi
 
-    log_info "添加 GitHub host key 到 known_hosts"
-    if ssh-keyscan -T 5 github.com >> "$KNOWN_HOSTS_FILE" 2>/dev/null; then
-        log_ok "GitHub known_hosts 已更新"
+    log_info "添加 GitHub SSH host key 到 known_hosts"
+    if ssh-keyscan -T 5 -p 443 ssh.github.com >> "$KNOWN_HOSTS_FILE" 2>/dev/null; then
+        log_ok "GitHub SSH known_hosts 已更新"
     else
         log_warn "无法连接 github.com，跳过 known_hosts 初始化"
     fi
@@ -112,6 +143,7 @@ main() {
     fi
 
     ensure_ssh_dir
+    ensure_github_ssh_config
 
     local key
     if key="$(find_existing_key)"; then

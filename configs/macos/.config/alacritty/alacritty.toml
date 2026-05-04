@@ -10,3 +10,8 @@ size = 19
 [terminal.shell]
 program = "/bin/bash"
 args = ["--login"]
+
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"

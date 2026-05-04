@@ -99,7 +99,8 @@ install_apps() {
     
     # Ghostty (如果可用)
     if ! command -v ghostty >/dev/null 2>&1; then
-        log_macos "Ghostty 未安装，可通过 Homebrew 安装: brew install --cask ghostty"
+        log_macos "安装 Ghostty..."
+        brew install --cask ghostty
     fi
     
     # Nerd Font（LazyVim 图标渲染需要）
