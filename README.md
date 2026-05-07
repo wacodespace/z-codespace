@@ -185,6 +185,8 @@ bash scripts/doctor.sh
 
 - 前缀键: `C-a`
 - vi 模式 + hjkl 面板导航
+- 窗口切换: macOS 用 `C-a Left/Right`，Linux 用 `Alt-h/l`
+- Pane 位置互换: `C-a H/J/K/L`
 - 鼠标支持
 - 与 nvim 无缝导航 (`C-h/j/k/l`)
 - `escape-time 10` 避免 nvim Esc 延迟
