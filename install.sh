@@ -3,10 +3,11 @@
 # ============================================================
 #
 # 用法:
-#   bash install.sh              # 交互式安装（含基础配置 + 可选 nvim）
-#   bash install.sh --all        # 安装所有组件（基础配置 + nvim 环境）
-#   bash install.sh --nvim-only  # 仅安装 nvim 环境
-#   bash install.sh --force      # 强制覆盖
+#   bash install.sh                  # 交互式安装（含基础配置 + 可选组件）
+#   bash install.sh --all            # 安装所有组件
+#   bash install.sh --nvim-only      # 仅安装 nvim 环境
+#   bash install.sh --claude-hud     # 仅安装 Claude HUD 状态栏插件
+#   bash install.sh --force          # 强制覆盖
 # ============================================================
 
 set -euo pipefail
@@ -20,25 +21,30 @@ OS="$(detect_os)"
 FORCE=""
 INSTALL_NVIM=false
 NVIM_ONLY=false
+INSTALL_CLAUDE_HUD=false
+CLAUDE_HUD_ONLY=false
 
 # --- 参数解析 ---
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --all)       INSTALL_NVIM=true; shift ;;
-        --nvim-only) NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
-        --force)     FORCE="--force"; shift ;;
+        --all)            INSTALL_NVIM=true; INSTALL_CLAUDE_HUD=true; shift ;;
+        --nvim-only)      NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
+        --claude-hud)     CLAUDE_HUD_ONLY=true; INSTALL_CLAUDE_HUD=true; shift ;;
+        --force)          FORCE="--force"; shift ;;
         -h|--help)
             echo "用法: $0 [选项]"
             echo ""
             echo "选项:"
-            echo "  --all        安装所有组件（基础配置 + Neovim 环境）"
-            echo "  --nvim-only  仅安装 Neovim (LazyVim) 环境"
-            echo "  --force      强制覆盖，不备份"
-            echo "  -h, --help   显示帮助"
+            echo "  --all            安装所有组件（基础配置 + Neovim + Claude HUD）"
+            echo "  --nvim-only      仅安装 Neovim (LazyVim) 环境"
+            echo "  --claude-hud     仅安装 Claude HUD 状态栏插件"
+            echo "  --force          强制覆盖，不备份"
+            echo "  -h, --help       显示帮助"
             echo ""
             echo "组件:"
-            echo "  基础配置     bashrc, vimrc, tmux.conf, 终端配置"
-            echo "  Neovim 环境  依赖安装 + LazyVim 配置部署"
+            echo "  基础配置         bashrc, vimrc, tmux.conf, 终端配置"
+            echo "  Neovim 环境      依赖安装 + LazyVim 配置部署"
+            echo "  Claude HUD       Claude Code 实时状态栏 (context/tools/agents/todos)"
             exit 0
             ;;
         *)
@@ -56,7 +62,7 @@ main() {
     echo ""
 
     # --- 基础配置 ---
-    if [ "$NVIM_ONLY" != "true" ]; then
+    if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ]; then
         log_step "安装基础配置..."
         case "$OS" in
             macos)
@@ -74,27 +80,50 @@ main() {
     fi
 
     # --- Neovim 环境 ---
-    if [ "$INSTALL_NVIM" = "true" ]; then
-        log_step "安装 Neovim (LazyVim) 环境..."
-        echo ""
-        bash "$SCRIPT_DIR/scripts/install-deps.sh"
-        echo ""
-        bash "$SCRIPT_DIR/scripts/install-nvim.sh" $FORCE
-    else
-        # 交互式询问
-        echo ""
-        log_info "是否安装 Neovim (LazyVim) 开发环境？"
-        log_info "（需要下载 ~200MB 依赖和插件）"
-        printf "  输入 y 安装，其他跳过: "
-        read -r answer
-        if [[ "$answer" =~ ^[Yy] ]]; then
+    if [ "$CLAUDE_HUD_ONLY" != "true" ]; then
+        if [ "$INSTALL_NVIM" = "true" ]; then
+            log_step "安装 Neovim (LazyVim) 环境..."
             echo ""
             bash "$SCRIPT_DIR/scripts/install-deps.sh"
             echo ""
             bash "$SCRIPT_DIR/scripts/install-nvim.sh" $FORCE
         else
-            log_info "跳过 Neovim 环境安装"
-            log_info "后续可运行: bash scripts/install-deps.sh && bash scripts/install-nvim.sh"
+            # 交互式询问
+            echo ""
+            log_info "是否安装 Neovim (LazyVim) 开发环境？"
+            log_info "（需要下载 ~200MB 依赖和插件）"
+            printf "  输入 y 安装，其他跳过: "
+            read -r answer
+            if [[ "$answer" =~ ^[Yy] ]]; then
+                echo ""
+                bash "$SCRIPT_DIR/scripts/install-deps.sh"
+                echo ""
+                bash "$SCRIPT_DIR/scripts/install-nvim.sh" $FORCE
+            else
+                log_info "跳过 Neovim 环境安装"
+                log_info "后续可运行: bash scripts/install-deps.sh && bash scripts/install-nvim.sh"
+            fi
+        fi
+    fi
+
+    # --- Claude HUD ---
+    if [ "$INSTALL_CLAUDE_HUD" = "true" ]; then
+        echo ""
+        log_step "安装 Claude HUD 状态栏插件..."
+        echo ""
+        bash "$SCRIPT_DIR/scripts/install-claude-hud.sh"
+    elif [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ]; then
+        # 交互式询问
+        echo ""
+        log_info "是否安装 Claude HUD？（Claude Code 实时状态栏: context/tools/agents/todos）"
+        printf "  输入 y 安装，其他跳过: "
+        read -r answer
+        if [[ "$answer" =~ ^[Yy] ]]; then
+            echo ""
+            bash "$SCRIPT_DIR/scripts/install-claude-hud.sh"
+        else
+            log_info "跳过 Claude HUD 安装"
+            log_info "后续可运行: bash scripts/install-claude-hud.sh"
         fi
     fi
 
