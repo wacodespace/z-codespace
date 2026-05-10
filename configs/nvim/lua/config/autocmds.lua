@@ -30,6 +30,18 @@ autocmd("FileType", {
   end,
 })
 
+-- Markdown 阅读体验
+autocmd("FileType", {
+  pattern = "markdown",
+  callback = function()
+    vim.opt_local.wrap = true
+    vim.opt_local.linebreak = true
+    vim.opt_local.breakindent = true
+    vim.opt_local.conceallevel = 2
+    vim.opt_local.concealcursor = ""
+  end,
+})
+
 -- 大文件优化（>1MB）：禁用语法高亮等耗性能功能
 autocmd("BufReadPre", {
   callback = function(args)
