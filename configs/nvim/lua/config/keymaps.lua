@@ -11,6 +11,19 @@ map("n", "<leader>q", "<cmd>q<cr>", { desc = "退出" })
 -- 清除搜索高亮
 map("n", "<leader>l", "<cmd>nohlsearch<cr>", { desc = "清除高亮" })
 
+-- 复制当前 buffer 文件路径
+map("n", "<leader>yp", function()
+  local path = vim.fn.expand("%:.")
+  vim.fn.setreg("+", path)
+  vim.notify("已复制相对路径: " .. path)
+end, { desc = "复制当前文件相对路径" })
+
+map("n", "<leader>yP", function()
+  local path = vim.fn.expand("%:p")
+  vim.fn.setreg("+", path)
+  vim.notify("已复制绝对路径: " .. path)
+end, { desc = "复制当前文件绝对路径" })
+
 -- H/L 保留 LazyVim 默认：S-h 上一个 buffer, S-l 下一个 buffer
 -- 行首行尾用原生 ^ / $ 或 S-i / S-a
 
