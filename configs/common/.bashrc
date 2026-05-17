@@ -120,6 +120,9 @@ alias cdz='cd /home/admin/zhc'
 # --- Git 别名 ---
 alias g='git'
 
+# 兼容旧配置：glt 曾是 alias，需先清理，否则 Bash 会展开 glt() 导致语法错误。
+unalias glt 2>/dev/null || true
+
 gl() {
     git log --oneline -"${1:-10}"
 }
@@ -624,3 +627,7 @@ alias mv='mv -i'
 
 # 服务器信息
 alias about='echo "系统: $(uname -s)" && echo "版本: $(uname -r)" && echo "架构: $(uname -m)" && echo "在线: $(uptime -p)"'
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+# <<< grok installer <<<

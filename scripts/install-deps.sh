@@ -22,7 +22,7 @@
 #   tmux       — 终端复用
 #   lazygit    — Git TUI
 #   xclip/xsel — Linux 系统剪贴板支持
-#   claude     — Claude Code CLI，供 claudecode.nvim 插件联动
+#   claude     — Claude Code CLI（终端 cc；与 nvim <Space>xs 剪贴板配合）
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -294,7 +294,7 @@ install_nvim_linux() {
     fi
 }
 
-# --- 安装 Claude Code CLI (供 claudecode.nvim 插件联动) ---
+# --- 安装 Claude Code CLI ---
 # 非致命：失败只输出警告，不中断整个安装流程
 install_claude_cli() {
     if has_cmd claude; then
@@ -304,7 +304,7 @@ install_claude_cli() {
 
     if ! has_cmd npm; then
         log_warn "未找到 npm，跳过 Claude Code CLI 安装"
-        log_warn "如需使用 nvim 的 claudecode.nvim 插件，请手动安装:"
+        log_warn "如需在终端使用 Claude Code，请手动安装:"
         log_warn "  npm install -g @anthropic-ai/claude-code"
         return 0
     fi

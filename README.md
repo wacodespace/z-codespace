@@ -180,7 +180,7 @@ bash scripts/doctor.sh
 | `<Space>l` | Lazy 插件管理 |
 | `<C-\>` | 浮动终端 |
 | `<C-h/j/k/l>` | 窗口 / tmux pane 切换 |
-| `<Space>xs` (Visual) | 发送选中代码给 Codex 分析 |
+| `<Space>xs` (Visual) | 复制「绝对路径 + 选中代码」到剪贴板（粘贴到 Codex / Claude Code 等） |
 
 ### tmux
 

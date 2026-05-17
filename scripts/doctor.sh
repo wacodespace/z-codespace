@@ -185,7 +185,7 @@ main() {
     check_cmd lazygit false "Git TUI"
     check_cmd npm     false "Node 包管理"
     check_cmd pip3    false "Python 包管理"
-    check_cmd claude  false "Claude Code CLI (claudecode.nvim 插件依赖)"
+    check_cmd claude  false "Claude Code CLI (终端 cc；与 <Space>xs 剪贴板配合)"
     echo ""
 
     log_step "--- 配置状态 ---"
