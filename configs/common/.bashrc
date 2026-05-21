@@ -1,6 +1,11 @@
 # ~/.bashrc - 个人 Shell 配置
 # ============================================================
 
+# Homebrew on Apple Silicon
+if [ -x /opt/homebrew/bin/brew ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
 # --- 非交互式退出 ---
 case $- in
     *i*) ;;
