@@ -33,3 +33,8 @@ palette = 12=#66D9EF
 palette = 13=#AE81FF
 palette = 14=#2AA198
 palette = 15=#F8F8F2
+
+keybind = cmd+shift+h=goto_split:left
+keybind = cmd+shift+l=goto_split:right
+keybind = cmd+shift+k=goto_split:top
+keybind = cmd+shift+j=goto_split:bottom
