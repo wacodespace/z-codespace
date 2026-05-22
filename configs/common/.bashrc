@@ -204,14 +204,9 @@ docker() {
 # --- PATH (去重整理) ---
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
-# --- npm 全局安装目录（避免 sudo，但与 nvm 不兼容）---
-# 仅在未使用 nvm 时设置，避免与 nvm 的 prefix 管理冲突
-if [ -z "${NVM_DIR:-}" ] && [ ! -d "$HOME/.nvm" ]; then
-    mkdir -p "$HOME/.npm-global"
-    if command -v npm >/dev/null 2>&1; then
-        npm config set prefix "$HOME/.npm-global" 2>/dev/null || true
-    fi
-fi
+# --- AI CLI 固定 npm prefix ---
+# Claude Code / Codex 统一安装到这里，不依赖当前 npm config prefix。
+export AI_NPM_PREFIX="${AI_NPM_PREFIX:-$HOME/.npm-global}"
 
 # --- Git 全局配置: HTTPS → SSH (仅 Linux) ---
 if [[ "$(uname -s)" == "Linux" ]]; then
@@ -255,22 +250,6 @@ _ai_fetch() {
     fi
 }
 
-_ai_download_to() {
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$1" -o "$2"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$2" "$1"
-    else
-        printf '%s\n' "需要 curl 或 wget，当前系统未找到。" >&2
-        return 1
-    fi
-}
-
-_ai_file_looks_like_shell() {
-    [ -s "$1" ] || return 1
-    head -n 5 "$1" | grep -Eiq '^(#!|set[[:space:]]+-|[[:space:]]*(if|case|function)[[:space:](]|[[:space:]]*[A-Za-z_][A-Za-z0-9_]*\(\)[[:space:]]*\{)'
-}
-
 _ai_ensure_nvm() {
     export NVM_DIR="$HOME/.nvm"
     if [ ! -s "$NVM_DIR/nvm.sh" ]; then
@@ -296,89 +275,156 @@ _ai_ensure_node() {
     command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1
 }
 
-_install_claude_code() {
-    if command -v claude >/dev/null 2>&1; then
-        printf '%s\n' "claude 已存在：$(command -v claude)"
-        claude --version 2>/dev/null || true
+_ai_ensure_npm_prefix() {
+    mkdir -p "$AI_NPM_PREFIX/bin"
+    case ":$PATH:" in
+        *":$AI_NPM_PREFIX/bin:"*) ;;
+        *)
+            printf '%s\n' "提示: $AI_NPM_PREFIX/bin 不在 PATH 中，当前 shell 可能找不到刚安装的命令。" >&2
+            ;;
+    esac
+}
+
+_ai_known_npm_prefixes() {
+    local prefix=""
+
+    printf '%s\n' "$AI_NPM_PREFIX"
+
+    if command -v npm >/dev/null 2>&1; then
+        prefix="$(npm config get prefix 2>/dev/null || true)"
+        [ -n "$prefix" ] && [ "$prefix" != "undefined" ] && printf '%s\n' "$prefix"
+    fi
+
+    [ -d /opt/homebrew ] && printf '%s\n' /opt/homebrew
+    [ -d /usr/local ] && printf '%s\n' /usr/local
+
+    if [ -n "${NVM_DIR:-}" ] && [ -d "$NVM_DIR/versions/node" ]; then
+        for prefix in "$NVM_DIR"/versions/node/*; do
+            [ -d "$prefix" ] && printf '%s\n' "$prefix"
+        done
+    fi
+}
+
+_ai_unique_known_npm_prefixes() {
+    local prefix=""
+    local seen=":"
+
+    while IFS= read -r prefix; do
+        [ -n "$prefix" ] || continue
+        case "$seen" in
+            *":$prefix:"*) ;;
+            *)
+                seen="${seen}${prefix}:"
+                printf '%s\n' "$prefix"
+                ;;
+        esac
+    done < <(_ai_known_npm_prefixes)
+}
+
+_ai_prefix_has_package() {
+    local prefix="$1"
+    local package_name="$2"
+
+    [ -d "$prefix/lib/node_modules/$package_name" ]
+}
+
+_ai_uninstall_from_prefix() {
+    local prefix="$1"
+    local package_name="$2"
+
+    if ! _ai_prefix_has_package "$prefix" "$package_name"; then
         return 0
     fi
-    local installer_tmp=""
-    installer_tmp=$(mktemp 2>/dev/null) || installer_tmp="/tmp/claude-install.$$"
-    if _ai_download_to "https://claude.ai/install.sh" "$installer_tmp"; then
-        if _ai_file_looks_like_shell "$installer_tmp"; then
-            if bash "$installer_tmp"; then
-                hash -r
-            fi
-        else
-            printf '%s\n' "Claude 原生安装脚本不可用，可能是区域限制或返回了网页，改用 npm 安装。" >&2
+
+    printf '%s\n' "卸载重复安装: $package_name ($prefix)"
+    npm uninstall -g --prefix "$prefix" "$package_name"
+}
+
+_ai_cleanup_duplicate_npm_package() {
+    local package_name="$1"
+    local keep_prefix="$2"
+    local prefix=""
+    local failed=0
+
+    while IFS= read -r prefix; do
+        [ -n "$prefix" ] || continue
+        [ "$prefix" != "$keep_prefix" ] || continue
+        if _ai_prefix_has_package "$prefix" "$package_name"; then
+            _ai_uninstall_from_prefix "$prefix" "$package_name" || failed=1
         fi
-    fi
-    rm -f "$installer_tmp"
-    if command -v claude >/dev/null 2>&1; then
-        printf '%s\n' "Claude Code 安装完成。"
-        claude --version 2>/dev/null || true
-        return 0
-    fi
+    done < <(_ai_unique_known_npm_prefixes)
+
+    return "$failed"
+}
+
+_ai_report_duplicate_npm_package() {
+    local package_name="$1"
+    local keep_prefix="$2"
+    local prefix=""
+    local found=0
+
+    while IFS= read -r prefix; do
+        [ -n "$prefix" ] || continue
+        [ "$prefix" != "$keep_prefix" ] || continue
+        if _ai_prefix_has_package "$prefix" "$package_name"; then
+            if [ "$found" -eq 0 ]; then
+                printf '%s\n' "检测到重复安装:"
+                found=1
+            fi
+            printf '%s\n' "  $prefix/lib/node_modules/$package_name"
+        fi
+    done < <(_ai_unique_known_npm_prefixes)
+
+    return "$found"
+}
+
+_ai_install_npm_global_managed() {
+    local package_name="$1"
+    local command_name="$2"
+
     _ai_ensure_node || return 1
-    npm install -g @anthropic-ai/claude-code || return 1
+    _ai_ensure_npm_prefix
+
+    npm install -g --prefix "$AI_NPM_PREFIX" "$package_name" || return 1
+    _ai_cleanup_duplicate_npm_package "$package_name" "$AI_NPM_PREFIX" || return 1
     hash -r
-    if command -v claude >/dev/null 2>&1; then
-        printf '%s\n' "Claude Code 安装完成（npm 回退方案）。"
-        claude --version 2>/dev/null || true
+
+    if [ -x "$AI_NPM_PREFIX/bin/$command_name" ]; then
+        printf '%s\n' "$command_name 安装完成: $AI_NPM_PREFIX/bin/$command_name"
+        "$AI_NPM_PREFIX/bin/$command_name" --version 2>/dev/null || true
         return 0
     fi
-    printf '%s\n' "Claude Code 安装失败。" >&2
+
+    printf '%s\n' "$command_name 安装失败。" >&2
     return 1
 }
 
+_install_claude_code() {
+    _ai_install_npm_global_managed "@anthropic-ai/claude-code" "claude"
+}
+
 _install_codex() {
-    _ai_ensure_node || return 1
-    npm install -g @openai/codex || return 1
-    hash -r
-    if command -v codex >/dev/null 2>&1; then
-        printf '%s\n' "Codex 安装完成。"
-        codex --version 2>/dev/null || true
-        return 0
-    fi
-    printf '%s\n' "Codex 安装失败。" >&2
-    return 1
+    _ai_install_npm_global_managed "@openai/codex" "codex"
 }
 
 _uninstall_npm_global() {
     local package_name="$1"
     local command_name="$2"
 
-    if ! command -v npm >/dev/null 2>&1; then
-        printf '%s\n' "未找到 npm，无法卸载 $package_name。" >&2
-        return 1
-    fi
-
-    npm uninstall -g "$package_name" || return 1
+    _ai_ensure_node || return 1
+    _ai_uninstall_from_prefix "$AI_NPM_PREFIX" "$package_name" || return 1
+    _ai_cleanup_duplicate_npm_package "$package_name" "$AI_NPM_PREFIX" || return 1
     hash -r
     if command -v "$command_name" >/dev/null 2>&1; then
         printf '%s\n' "$command_name 仍存在：$(command -v "$command_name")"
+        _ai_report_duplicate_npm_package "$package_name" "$AI_NPM_PREFIX" || true
         return 1
     fi
     printf '%s\n' "$command_name 已卸载。"
 }
 
 _uninstall_claude_code() {
-    local claude_path=""
-    claude_path="$(command -v claude 2>/dev/null || true)"
-
-    if [ -z "$claude_path" ]; then
-        printf '%s\n' "claude 未安装。"
-        return 0
-    fi
-
-    if command -v npm >/dev/null 2>&1 && npm list -g @anthropic-ai/claude-code >/dev/null 2>&1; then
-        _uninstall_npm_global "@anthropic-ai/claude-code" "claude"
-        return $?
-    fi
-
-    printf '%s\n' "claude 存在，但未检测到 npm 全局包：$claude_path"
-    printf '%s\n' "如果它来自 Claude 原生安装器，请使用官方卸载方式或手动检查安装目录。"
-    return 1
+    _uninstall_npm_global "@anthropic-ai/claude-code" "claude"
 }
 
 _uninstall_codex() {
