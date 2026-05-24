@@ -184,9 +184,9 @@ bash scripts/doctor.sh
 
 - **Leader 键**: Space
 - **缩进**: 4 空格 (Python)，2 空格 (C/C++)
-- **LSP**: pyright / clangd / lua_ls / bashls / jsonls / yamlls / marksman
+- **LSP**: pyright / clangd（系统）/ lua_ls / bash-language-server（其它语言通过 LazyVim extras 按需开启）
 - **格式化**: black + isort (Python) / stylua (Lua) / shfmt (Shell)
-- **Treesitter**: python / c / cpp / cuda / lua / bash / json / yaml / markdown
+- **Treesitter**: python / c / cpp / cuda / lua / bash / json / yaml / toml / markdown(+\_inline) / vim / vimdoc / regex / query
 - **版本锁定**: 通过 lazy-lock.json，不自动检查更新
 
 常用快捷键：

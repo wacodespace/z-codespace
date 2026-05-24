@@ -1,30 +1,29 @@
--- 语言支持 (LSP / 格式化 / Lint)
+-- 语言支持 (LSP / 格式化)
 -- ============================================================
 --
--- 通过 lazyvim.json extras 启用的语言支持:
---   extras.lang.python  → pyright + ruff + black
---   extras.lang.clangd  → clangd
---   extras.lang.json    → jsonls + schemastore
---   extras.lang.yaml    → yamlls
---   extras.lang.markdown→ marksman
+-- 当前 lazyvim.json 启用的 extras 只有 editor.snacks_picker；
+-- 语言相关的 extras (lang.python / lang.clangd / lang.json 等) 都未启用。
+-- 这意味着所有 LSP 配置都来自本文件的 mason ensure_installed +
+-- nvim-lspconfig servers = { ... } 自动 mason 检测。
 --
--- 本文件负责:
---   1. 补充 extras 未覆盖的语言 (bash)
---   2. 覆盖 LSP 默认配置
---   3. 配置格式化工具
+-- 实际启用的 LSP:
+--   pyright    — servers={pyright=...} 自动 mason 安装
+--   clangd     — mason=false，使用系统 clangd（GPU 机自带 LLVM）
+--   bashls     — mason ensure_installed: bash-language-server
+--   lua_ls     — LazyVim 核心默认（编辑 nvim 配置必备）
+--
+-- 想要 jsonls / yamlls / marksman / tsserver：
+--   编辑 lazyvim.json，在 extras 数组中加入对应的 lazyvim.plugins.extras.lang.*
 --
 -- LSP 安装方式一览:
--- ┌───────────┬──────────────────┬─────────────────────────────┬──────────┐
--- │ 语言      │ LSP              │ 安装方式                    │ 离线可用 │
--- ├───────────┼──────────────────┼─────────────────────────────┼──────────┤
--- │ Python    │ pyright          │ mason / npm                 │ 是*      │
--- │ C/C++     │ clangd           │ 系统包管理器 (推荐)          .  是       │
--- │ Lua       │ lua_ls           │ mason / GitHub release      │ 是*      │
--- │ Bash      │ bashls           │ mason / npm                 │ 是*      │
--- │ JSON      │ jsonls           │ mason                       │ 是*      │
--- │ YAML      │ yamlls           │ mason                       │ 是*      │
--- │ Markdown  │ marksman         │ mason / GitHub release      │ 是*      │
--- └───────────┴──────────────────┴─────────────────────────────┴──────────┘
+-- ┌───────────┬──────────────────────┬─────────────────────────────┬──────────┐
+-- │ 语言      │ LSP                  │ 安装方式                    │ 离线可用 │
+-- ├───────────┼──────────────────────┼─────────────────────────────┼──────────┤
+-- │ Python    │ pyright              │ mason 自动                  │ 是*      │
+-- │ C/C++     │ clangd               │ 系统包管理器                │ 是       │
+-- │ Bash      │ bash-language-server │ mason ensure_installed      │ 是*      │
+-- │ Lua       │ lua_ls               │ LazyVim 核心默认            │ 是*      │
+-- └───────────┴──────────────────────┴─────────────────────────────┴──────────┘
 -- * = 安装阶段需要网络，安装完成后离线可用
 --
 -- 离线迁移: 打包 ~/.local/share/nvim/mason/ 目录即可
