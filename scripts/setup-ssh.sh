@@ -51,6 +51,12 @@ ensure_ssh_dir() {
 }
 
 ensure_github_ssh_config() {
+    # 接收实际存在的 key path（来自 find_existing_key 或 generate_key），
+    # 而不是写死 id_ed25519 — 避免与实际 key 不一致导致 push 失败
+    local key_path="${1:-$HOME/.ssh/id_ed25519}"
+    # 转成 ~ 前缀让生成的 config 更可读
+    local key_for_config="${key_path/#$HOME/\~}"
+
     touch "$SSH_CONFIG_FILE"
     chmod 600 "$SSH_CONFIG_FILE"
 
@@ -68,14 +74,14 @@ ensure_github_ssh_config() {
         return 0
     fi
 
-    log_info "配置 GitHub SSH 走 443 端口"
+    log_info "配置 GitHub SSH 走 443 端口 (key: $key_for_config)"
     {
         echo ""
         echo "Host github.com"
         echo "  HostName ssh.github.com"
         echo "  User git"
         echo "  Port 443"
-        echo "  IdentityFile ~/.ssh/id_ed25519"
+        echo "  IdentityFile $key_for_config"
         echo "  IdentitiesOnly yes"
     } >> "$SSH_CONFIG_FILE"
 }
@@ -143,8 +149,8 @@ main() {
     fi
 
     ensure_ssh_dir
-    ensure_github_ssh_config
 
+    # 必须先确定 key，再写 ~/.ssh/config，否则可能写入指向不存在 key 的 IdentityFile
     local key
     if key="$(find_existing_key)"; then
         log_ok "检测到已有 SSH key: $key"
@@ -153,6 +159,7 @@ main() {
         generate_key "$(detect_comment)"
     fi
 
+    ensure_github_ssh_config "$key"
     ensure_github_known_host
     print_next_step "$key"
 }
