@@ -1,4 +1,5 @@
-# ~/.bashrc - 个人 Shell 配置
+# ~/.bashrc - 个人 Shell 配置（入口 + env + loader）
+# Git 别名 / AI CLI / 阿里 site 各在 bash/*.sh 和 configs/site/aliyun-gpu.sh
 # ============================================================
 
 # Homebrew on Apple Silicon
@@ -41,7 +42,6 @@ export CLICOLOR=1
 export LSCOLORS=ExFxBxDxCxegedabagacad
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
-
 
 # --- 历史记录 ---
 HISTCONTROL=ignoreboth
@@ -97,10 +97,8 @@ alias ll='ls -lh'
 alias la='ls -A'
 alias l='ls -CF'
 alias rm='rm -I'
-
-# --- 导航别名 ---
-alias cdn='cd /chatgpt_nas'
-alias cdz='cd /home/admin/zhc'
+alias s='ssh'
+alias pps='pip show'
 
 # --- 本仓库 Git 作者（写入该仓库 .git/config，不依赖全局 user.name / user.email）---
 # 优先 $DOTFILES_DIR；否则若 ~/.bashrc 是指向本仓库的符号链接则自动解析目录；否则用 $HOME/dotfiles
@@ -122,61 +120,6 @@ alias cdz='cd /home/admin/zhc'
     unset _df_git
 }
 
-# --- Git 别名 ---
-alias g='git'
-
-# 兼容旧配置：glt 曾是 alias，需先清理，否则 Bash 会展开 glt() 导致语法错误。
-unalias glt 2>/dev/null || true
-
-gl() {
-    git log --oneline -"${1:-10}"
-}
-glt() {
-    git log -n "${1:-10}" --date=format:'%Y-%m-%d %H:%M' --pretty=format:'%C(yellow)%h%Creset %Cgreen%ad%Creset %s'
-}
-gls() {
-    git log --shortstat -"${1:-10}"
-}
-alias s='ssh'
-alias gp='git pull'
-alias gf='git diff'
-alias gs='git status'
-alias gss='git submodule status'
-alias gsw='git switch'
-alias gb='git branch'
-alias gc='git checkout'
-alias gclone='git clone --recursive'
-alias gcl='git clone --recurse-submodules'
-alias grl='git reflog --date=short'
-alias gamd='git commit --amend --no-edit'
-alias gpuf='git push --force-with-lease'
-alias gfs='git diff --stat --'
-alias gfn='git diff --numstat --'
-
-# 先 pull 再 commit（避免冲突）
-gcm() {
-    if [ $# -eq 0 ]; then
-        echo "用法: gcm '提交信息'" >&2
-        return 1
-    fi
-    git pull && git commit -m "$1"
-}
-
-# 列出上面定义的 Git 别名与函数（gg：git 快捷键备忘）
-gg() {
-    printf '%s\n' "=== Git 快捷键（本文件）===" ""
-    printf '%s\n' "别名:"
-    alias | grep -E "^alias (g|gp|gf|gs|gss|gsw|gb|gc|gclone|gcl|grl|gamd|gpuf|gfs|gfn)='" | sed 's/^/  /' | sort
-    printf '%s\n' "" "函数:"
-    printf '%s\n' \
-        "  gl [N]     git log --oneline（省略 N 时默认 10 条）" \
-        "  glt [N]    git log 带提交时间（省略 N 时默认 10 条）" \
-        "  gls [N]    git log --shortstat（省略 N 时默认 10 条）" \
-        "  gcm 'msg'  先 git pull 再 git commit -m（避免冲突）" \
-        "" \
-        "（提示：单独看全部 alias 用命令 alias）"
-}
-
 # --- GPU 监控别名 (NVIDIA) ---
 alias nv='nvidia-smi'
 alias wnv='watch -n 0.1 nvidia-smi'
@@ -187,19 +130,6 @@ alias wrc='watch -n 0.1 rocm-smi'
 alias rcp='rocm-smi --showpids'
 alias rocm='rocm-smi --showuse --showmeminfo vram --showpids'
 alias wrocm='watch -n 0.1 rocm-smi --showuse --showmeminfo vram --showpids'
-
-# --- 工具别名 ---
-if [[ "$(uname -s)" == "Linux" ]]; then
-    alias ossutil='ossutil_x86_64'
-fi
-alias pps='pip show'
-alias v3='rocprofv3'
-alias oss='ossutil64 -i $OSS_AK_ID -k $OSS_AK_SECRET -e ${OSS_ENDPOINT:-cn-zhangjiakou.oss.aliyuncs.com} cp'
-
-# --- docker → pouch 包装 ---
-docker() {
-    pouch "$@"
-}
 
 # --- PATH (去重整理) ---
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
@@ -228,229 +158,17 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-_ai_fetch() {
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$1"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO- "$1"
-    else
-        printf '%s\n' "需要 curl 或 wget，当前系统未找到。" >&2
-        return 1
-    fi
+# --- 加载拆分模块（git aliases / AI CLI 等） ---
+_BASH_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/bash"
+[ -d "$_BASH_DIR" ] && {
+    . "$_BASH_DIR/git-aliases.sh"
+    . "$_BASH_DIR/ai-cli.sh"
 }
+unset _BASH_DIR
 
-_ai_ensure_nvm() {
-    export NVM_DIR="$HOME/.nvm"
-    if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-        _ai_fetch "https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh" | bash || return 1
-    fi
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-    command -v nvm >/dev/null 2>&1
-}
-
-_ai_ensure_node() {
-    local node_major=""
-    if command -v node >/dev/null 2>&1; then
-        node_major=$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || true)
-    fi
-    if [ -n "$node_major" ] && [ "$node_major" -ge 18 ] && command -v npm >/dev/null 2>&1; then
-        return 0
-    fi
-    _ai_ensure_nvm || return 1
-    nvm install --lts || return 1
-    nvm alias default 'lts/*' >/dev/null 2>&1 || true
-    nvm use default >/dev/null 2>&1 || nvm use --lts || return 1
-    command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1
-}
-
-_ai_ensure_npm_prefix() {
-    mkdir -p "$AI_NPM_PREFIX/bin"
-    case ":$PATH:" in
-        *":$AI_NPM_PREFIX/bin:"*) ;;
-        *)
-            printf '%s\n' "提示: $AI_NPM_PREFIX/bin 不在 PATH 中，当前 shell 可能找不到刚安装的命令。" >&2
-            ;;
-    esac
-}
-
-_ai_known_npm_prefixes() {
-    local prefix=""
-
-    printf '%s\n' "$AI_NPM_PREFIX"
-
-    if command -v npm >/dev/null 2>&1; then
-        prefix="$(npm config get prefix 2>/dev/null || true)"
-        [ -n "$prefix" ] && [ "$prefix" != "undefined" ] && printf '%s\n' "$prefix"
-    fi
-
-    [ -d /opt/homebrew ] && printf '%s\n' /opt/homebrew
-    [ -d /usr/local ] && printf '%s\n' /usr/local
-
-    if [ -n "${NVM_DIR:-}" ] && [ -d "$NVM_DIR/versions/node" ]; then
-        for prefix in "$NVM_DIR"/versions/node/*; do
-            [ -d "$prefix" ] && printf '%s\n' "$prefix"
-        done
-    fi
-}
-
-_ai_unique_known_npm_prefixes() {
-    local prefix=""
-    local seen=":"
-
-    while IFS= read -r prefix; do
-        [ -n "$prefix" ] || continue
-        case "$seen" in
-            *":$prefix:"*) ;;
-            *)
-                seen="${seen}${prefix}:"
-                printf '%s\n' "$prefix"
-                ;;
-        esac
-    done < <(_ai_known_npm_prefixes)
-}
-
-_ai_prefix_has_package() {
-    local prefix="$1"
-    local package_name="$2"
-
-    [ -d "$prefix/lib/node_modules/$package_name" ]
-}
-
-_ai_uninstall_from_prefix() {
-    local prefix="$1"
-    local package_name="$2"
-
-    if ! _ai_prefix_has_package "$prefix" "$package_name"; then
-        return 0
-    fi
-
-    printf '%s\n' "卸载重复安装: $package_name ($prefix)"
-    npm uninstall -g --prefix "$prefix" "$package_name"
-}
-
-_ai_cleanup_duplicate_npm_package() {
-    local package_name="$1"
-    local keep_prefix="$2"
-    local prefix=""
-    local failed=0
-
-    while IFS= read -r prefix; do
-        [ -n "$prefix" ] || continue
-        [ "$prefix" != "$keep_prefix" ] || continue
-        if _ai_prefix_has_package "$prefix" "$package_name"; then
-            _ai_uninstall_from_prefix "$prefix" "$package_name" || failed=1
-        fi
-    done < <(_ai_unique_known_npm_prefixes)
-
-    return "$failed"
-}
-
-_ai_report_duplicate_npm_package() {
-    local package_name="$1"
-    local keep_prefix="$2"
-    local prefix=""
-    local found=0
-
-    while IFS= read -r prefix; do
-        [ -n "$prefix" ] || continue
-        [ "$prefix" != "$keep_prefix" ] || continue
-        if _ai_prefix_has_package "$prefix" "$package_name"; then
-            if [ "$found" -eq 0 ]; then
-                printf '%s\n' "检测到重复安装:"
-                found=1
-            fi
-            printf '%s\n' "  $prefix/lib/node_modules/$package_name"
-        fi
-    done < <(_ai_unique_known_npm_prefixes)
-
-    return "$found"
-}
-
-_ai_install_npm_global_managed() {
-    local package_name="$1"
-    local command_name="$2"
-
-    _ai_ensure_node || return 1
-    _ai_ensure_npm_prefix
-
-    npm install -g --prefix "$AI_NPM_PREFIX" "$package_name" || return 1
-    _ai_cleanup_duplicate_npm_package "$package_name" "$AI_NPM_PREFIX" || return 1
-    hash -r
-
-    if [ -x "$AI_NPM_PREFIX/bin/$command_name" ]; then
-        printf '%s\n' "$command_name 安装完成: $AI_NPM_PREFIX/bin/$command_name"
-        "$AI_NPM_PREFIX/bin/$command_name" --version 2>/dev/null || true
-        return 0
-    fi
-
-    printf '%s\n' "$command_name 安装失败。" >&2
-    return 1
-}
-
-_install_claude_code() {
-    _ai_install_npm_global_managed "@anthropic-ai/claude-code" "claude"
-}
-
-_install_codex() {
-    _ai_install_npm_global_managed "@openai/codex" "codex"
-}
-
-_uninstall_npm_global() {
-    local package_name="$1"
-    local command_name="$2"
-
-    _ai_ensure_node || return 1
-    _ai_uninstall_from_prefix "$AI_NPM_PREFIX" "$package_name" || return 1
-    _ai_cleanup_duplicate_npm_package "$package_name" "$AI_NPM_PREFIX" || return 1
-    hash -r
-    if command -v "$command_name" >/dev/null 2>&1; then
-        printf '%s\n' "$command_name 仍存在：$(command -v "$command_name")"
-        _ai_report_duplicate_npm_package "$package_name" "$AI_NPM_PREFIX" || true
-        return 1
-    fi
-    printf '%s\n' "$command_name 已卸载。"
-}
-
-_uninstall_claude_code() {
-    _uninstall_npm_global "@anthropic-ai/claude-code" "claude"
-}
-
-_uninstall_codex() {
-    if ! command -v codex >/dev/null 2>&1; then
-        printf '%s\n' "codex 未安装。"
-        return 0
-    fi
-
-    _uninstall_npm_global "@openai/codex" "codex"
-}
-
-icc() {
-    _install_claude_code
-}
-
-icx() {
-    _install_codex
-}
-
-ucc() {
-    _uninstall_claude_code
-}
-
-ucx() {
-    _uninstall_codex
-}
-
-cc() {
-    claude "$@"
-}
-
-cx() {
-    codex "$@"
-}
-
-# --- 服务器配置 (按需 source，由 linux_install.sh 创建 ~/.bash_server 软链接) ---
+# --- 服务器配置 (按需 source，由 install.sh 创建 ~/.bash_server / ~/.bash_site 软链接) ---
 [ -f ~/.bash_server ] && . ~/.bash_server
+[ -f ~/.bash_site ] && . ~/.bash_site
 
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"
