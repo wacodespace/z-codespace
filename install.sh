@@ -119,6 +119,31 @@ apply_profile() {
     esac
 }
 
+# --- 一次性 Git 全局配置（取代 .bashrc 启动时反复写 ~/.gitconfig）---
+setup_git_global_config() {
+    if ! has_cmd git; then
+        log_warn "git 未安装，跳过 git config 全局设置"
+        return 0
+    fi
+    log_step "配置 Git 全局设置..."
+
+    # UTF-8 / 中文文件名输出
+    git config --global core.quotepath false
+    git config --global gui.encoding utf-8
+    git config --global i18n.commitencoding utf-8
+    git config --global i18n.logoutputencoding utf-8
+
+    # Linux profile：HTTPS → SSH 重写（macOS 桌面不需要，避免限制 https clone）
+    case "$PROFILE" in
+        ubuntu-*)
+            if ! git config --global --get "url.git@github.com:.insteadOf" >/dev/null 2>&1; then
+                log_info "设置 Git HTTPS -> SSH 重写规则"
+                git config --global "url.git@github.com:".insteadOf "https://github.com/"
+            fi
+            ;;
+    esac
+}
+
 main() {
     # nvim-only / claude-hud-only 时不需要 profile
     if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ]; then
@@ -138,18 +163,12 @@ main() {
     # --- 基础配置（按 profile dispatch） ---
     if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ]; then
         apply_profile
+        setup_git_global_config
 
         # SSH key（所有 profile 都需要）
         log_step "检查 SSH key..."
         bash "$SCRIPT_DIR/scripts/setup-ssh.sh"
 
-        # Linux profile: Git HTTPS → SSH 重写
-        if [ "$PROFILE" = "ubuntu-desktop" ] || [ "$PROFILE" = "ubuntu-server" ]; then
-            if ! git config --global --get "url.git@github.com:.insteadOf" >/dev/null 2>&1; then
-                log_info "设置 Git HTTPS -> SSH 重写规则"
-                git config --global "url.git@github.com:".insteadOf "https://github.com/"
-            fi
-        fi
         echo ""
     fi
 

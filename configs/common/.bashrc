@@ -208,17 +208,6 @@ export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:/opt/rocm/b
 # Claude Code / Codex 统一安装到这里，不依赖当前 npm config prefix。
 export AI_NPM_PREFIX="${AI_NPM_PREFIX:-$HOME/.npm-global}"
 
-# --- Git 全局配置: HTTPS → SSH (仅 Linux) ---
-if [[ "$(uname -s)" == "Linux" ]]; then
-    git config --global url."git@github.com:".insteadOf "https://github.com/"
-fi
-
-# --- Git 中文编码配置 ---
-git config --global core.quotepath false
-git config --global gui.encoding utf-8
-git config --global i18n.commitencoding utf-8
-git config --global i18n.logoutputencoding utf-8
-
 # --- Bash 补全 ---
 if ! shopt -oq posix; then
     if [ -f /usr/share/bash-completion/bash_completion ]; then
