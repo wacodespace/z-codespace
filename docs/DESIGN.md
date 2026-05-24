@@ -11,7 +11,7 @@
 
 ### 极简稳定策略
 
-- **不追 nightly**：只使用 Neovim stable release（当前 0.10.x）
+- **不追 nightly**：只使用 Neovim stable release（当前 0.11.x，由 `scripts/install-deps.sh` 的 `NVIM_STABLE_VERSION` 控制）
 - **不追新插件**：只保留生产必需插件，不引入实验性功能
 - **不默认 AI**：不集成 copilot / claude / codex / avante 等 AI 插件
 - **不重度 UI**：不引入重量级 dashboard / 动画 / 主题切换器
@@ -39,44 +39,49 @@
 
 ## 2. 目录结构
 
+按 **profile** 分层（macos-desktop / ubuntu-desktop / ubuntu-server）。`install.sh` 自动检测 profile 并组合对应 layer：
+
 ```text
 z-codespace/
 ├── configs/
-│   ├── common/                  # 通用配置（已有）
-│   │   ├── .bashrc
+│   ├── common/                  # 三 profile 共用
+│   │   ├── .bash_profile
+│   │   ├── .bashrc              # 末尾 source ~/.bash_server（若存在）
 │   │   ├── .vimrc
-│   │   └── .tmux.conf          # 已增加 nvim 集成
-│   ├── macos/                   # macOS 配置（已有）
-│   ├── linux/                   # Linux 配置（已有）
-│   └── nvim/                    # [新增] LazyVim 配置
-│       ├── init.lua             # 入口文件
-│       ├── lazyvim.json         # LazyVim extras 声明
-│       ├── lazy-lock.json       # 插件版本锁（首次 sync 后生成）
+│   │   └── .tmux.conf
+│   ├── desktop/                 # 只在 desktop profile
+│   │   ├── .config/alacritty/shared.toml
+│   │   ├── macos/.config/alacritty/alacritty.toml
+│   │   ├── macos/.config/ghostty/config
+│   │   └── linux/.config/alacritty/alacritty.toml
+│   ├── server/                  # 只在 ubuntu-server profile
+│   │   └── .bash_server
+│   └── nvim/                    # 与 profile 解耦，由 install-nvim.sh 单独安装
+│       ├── init.lua
+│       ├── lazyvim.json
+│       ├── lazy-lock.json
 │       └── lua/
-│           ├── config/
-│           │   ├── lazy.lua     # lazy.nvim 引导
-│           │   ├── options.lua  # Neovim 选项
-│           │   ├── keymaps.lua  # 自定义快捷键
-│           │   └── autocmds.lua # 自动命令
-│           └── plugins/
-│               ├── editor.lua   # 编辑器增强 (tmux/terminal)
-│               ├── lang.lua     # 语言支持 (LSP/格式化)
-│               ├── treesitter.lua # Treesitter 配置
-│               └── disabled.lua # 明确禁用的插件
-├── scripts/                     # [新增] 自动化脚本
-│   ├── lib.sh                   # 共享工具函数
-│   ├── install-deps.sh          # 安装依赖 (nvim/rg/fd/node...)
-│   ├── install-nvim.sh          # 部署 LazyVim 配置
-│   ├── uninstall-nvim.sh        # 卸载配置
-│   ├── update-nvim.sh           # 更新插件
-│   ├── doctor.sh                # 环境健康检查
-│   ├── offline-pack.sh          # 创建离线部署包
-│   └── offline-deploy.sh        # 离线环境部署
-├── docs/                        # [新增] 文档
-│   └── DESIGN.md                # 本文档
-├── macos_install.sh             # macOS 安装脚本（已有）
-├── linux_install.sh             # Linux 安装脚本（已有）
-├── install.sh                   # [新增] 统一入口
+│           ├── config/          # lazy/options/keymaps/autocmds
+│           └── plugins/         # editor/lang/treesitter/disabled
+├── scripts/
+│   ├── lib.sh                   # 共享工具（日志、safe_link、检测）
+│   ├── profile-common.sh        # apply_common
+│   ├── profile-desktop.sh       # apply_desktop_shared / _macos / _linux + brew
+│   ├── profile-server.sh        # apply_server
+│   ├── profile-packages.sh      # Linux 包管理器基础工具
+│   ├── setup-ssh.sh
+│   ├── install-deps.sh          # Neovim 及运行依赖
+│   ├── install-nvim.sh          # 部署 LazyVim
+│   ├── uninstall-nvim.sh
+│   ├── update-nvim.sh
+│   ├── install-claude-hud.sh
+│   ├── doctor.sh
+│   ├── offline-pack.sh
+│   └── offline-deploy.sh
+├── docs/
+│   ├── DESIGN.md                # 本文档
+│   └── superpowers/specs/       # 重构设计 spec
+├── install.sh                   # 统一入口（按 --profile dispatch）
 ├── .gitignore
 └── README.md
 ```
@@ -85,16 +90,21 @@ z-codespace/
 
 ## 3. 部署原则
 
-### 操作系统检测
+### Profile 检测
+
+`install.sh` 的 `detect_profile()`：
 
 ```bash
-case "$(uname -s)" in
-    Darwin) OS="macos" ;;
-    Linux)  OS="linux" ;;
-esac
+detect_profile() {
+    [ "$(uname -s)" = "Darwin" ] && echo "macos-desktop" && return
+    [ -n "${SSH_CLIENT:-}${SSH_TTY:-}" ] && echo "ubuntu-server" && return
+    echo "ubuntu-desktop"
+}
 ```
 
-Linux 发行版检测通过 `/etc/os-release` 中的 `$ID` 字段判断。
+可通过 `--profile=X` / `--server` / `--desktop` 显式覆盖。
+
+Linux 发行版/包管理器检测通过 `/etc/os-release` 的 `$ID` 字段和 `command -v` 探测。
 
 ### 依赖检测
 
