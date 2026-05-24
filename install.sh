@@ -1,50 +1,87 @@
 #!/usr/bin/env bash
-# z-codespace/install.sh — 统一安装入口
+# z-codespace/install.sh — 统一安装入口（按 profile dispatch）
 # ============================================================
 #
+# Profile 分类（决定装哪些 layer）:
+#   macos-desktop    common + desktop/shared + desktop/macos
+#   ubuntu-desktop   common + desktop/shared + desktop/linux
+#   ubuntu-server    common + server
+#
 # 用法:
-#   bash install.sh                  # 交互式安装（含基础配置 + 可选组件）
-#   bash install.sh --all            # 安装所有组件
-#   bash install.sh --nvim-only      # 仅安装 nvim 环境
-#   bash install.sh --claude-hud     # 仅安装 Claude HUD 状态栏插件
-#   bash install.sh --force          # 强制覆盖
+#   bash install.sh                            # 自动检测 profile，交互式询问 nvim/claude-hud
+#   bash install.sh --profile=ubuntu-server    # 显式指定 profile
+#   bash install.sh --server                   # 语法糖 = --profile=ubuntu-server
+#   bash install.sh --desktop                  # mac → macos-desktop, linux → ubuntu-desktop
+#   bash install.sh --all                      # profile + nvim + claude-hud
+#   bash install.sh --nvim-only                # 仅 Neovim 环境
+#   bash install.sh --claude-hud               # 仅 Claude HUD
+#   bash install.sh --force                    # 强制覆盖
 # ============================================================
 
-set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
 
-# 引入共享库
 source "$SCRIPT_DIR/scripts/lib.sh"
+source "$SCRIPT_DIR/scripts/profile-common.sh"
+source "$SCRIPT_DIR/scripts/profile-desktop.sh"
+source "$SCRIPT_DIR/scripts/profile-server.sh"
+source "$SCRIPT_DIR/scripts/profile-packages.sh"
 
-OS="$(detect_os)"
-FORCE=""
+PROFILE=""
+FORCE="false"
 INSTALL_NVIM=false
 NVIM_ONLY=false
 INSTALL_CLAUDE_HUD=false
 CLAUDE_HUD_ONLY=false
 
+# --- 自动检测 profile ---
+detect_profile() {
+    if [ "$(uname -s)" = "Darwin" ]; then
+        echo "macos-desktop"
+    elif [ -n "${SSH_CLIENT:-}${SSH_TTY:-}" ]; then
+        echo "ubuntu-server"
+    else
+        echo "ubuntu-desktop"
+    fi
+}
+
 # --- 参数解析 ---
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --profile=*)      PROFILE="${1#--profile=}"; shift ;;
+        --profile)        PROFILE="$2"; shift 2 ;;
+        --server)         PROFILE="ubuntu-server"; shift ;;
+        --desktop)
+            if [ "$(uname -s)" = "Darwin" ]; then
+                PROFILE="macos-desktop"
+            else
+                PROFILE="ubuntu-desktop"
+            fi
+            shift ;;
         --all)            INSTALL_NVIM=true; INSTALL_CLAUDE_HUD=true; shift ;;
         --nvim-only)      NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
         --claude-hud)     CLAUDE_HUD_ONLY=true; INSTALL_CLAUDE_HUD=true; shift ;;
-        --force)          FORCE="--force"; shift ;;
+        --force)          FORCE="true"; shift ;;
         -h|--help)
-            echo "用法: $0 [选项]"
-            echo ""
-            echo "选项:"
-            echo "  --all            安装所有组件（基础配置 + Neovim + Claude HUD）"
-            echo "  --nvim-only      仅安装 Neovim (LazyVim) 环境"
-            echo "  --claude-hud     仅安装 Claude HUD 状态栏插件"
-            echo "  --force          强制覆盖，不备份"
-            echo "  -h, --help       显示帮助"
-            echo ""
-            echo "组件:"
-            echo "  基础配置         bashrc, vimrc, tmux.conf, 终端配置"
-            echo "  Neovim 环境      依赖安装 + LazyVim 配置部署"
-            echo "  Claude HUD       Claude Code 实时状态栏 (context/tools/agents/todos)"
+            cat <<'EOF'
+用法: install.sh [选项]
+
+Profile（决定装哪些 layer）:
+  --profile=macos-desktop|ubuntu-desktop|ubuntu-server
+  --profile <profile>       同上
+  --server                  = --profile=ubuntu-server
+  --desktop                 macOS 上 = macos-desktop, Linux 上 = ubuntu-desktop
+  （不指定时自动检测：macOS → macos-desktop, Linux+SSH → ubuntu-server, else → ubuntu-desktop）
+
+可选组件:
+  --all                     基础配置 + Neovim + Claude HUD
+  --nvim-only               仅 Neovim 环境
+  --claude-hud              仅 Claude HUD 状态栏
+
+其它:
+  --force                   强制覆盖，不备份
+  -h, --help                显示此帮助
+EOF
             exit 0
             ;;
         *)
@@ -54,28 +91,65 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+apply_profile() {
+    case "$PROFILE" in
+        macos-desktop)
+            install_homebrew
+            install_desktop_apps_macos
+            apply_common "$FORCE"
+            apply_desktop_shared "$FORCE"
+            apply_desktop_macos "$FORCE"
+            ;;
+        ubuntu-desktop)
+            install_packages_apt_min
+            apply_common "$FORCE"
+            apply_desktop_shared "$FORCE"
+            apply_desktop_linux "$FORCE"
+            ;;
+        ubuntu-server)
+            install_packages_apt_min
+            apply_common "$FORCE"
+            apply_server "$FORCE"
+            ;;
+        *)
+            log_error "不支持的 profile: $PROFILE"
+            log_error "支持: macos-desktop, ubuntu-desktop, ubuntu-server"
+            exit 1
+            ;;
+    esac
+}
+
 main() {
+    # nvim-only / claude-hud-only 时不需要 profile
+    if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ]; then
+        if [ -z "$PROFILE" ]; then
+            PROFILE="$(detect_profile)"
+            log_info "自动检测 profile: $PROFILE"
+        fi
+    fi
+
     log_step "=========================================="
     log_step "z-codespace 开发环境安装"
-    log_step "系统: $OS ($(detect_arch))"
+    [ -n "$PROFILE" ] && log_step "Profile: $PROFILE"
+    log_step "系统: $(detect_os) ($(detect_arch))"
     log_step "=========================================="
     echo ""
 
-    # --- 基础配置 ---
+    # --- 基础配置（按 profile dispatch） ---
     if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ]; then
-        log_step "安装基础配置..."
-        case "$OS" in
-            macos)
-                bash "$SCRIPT_DIR/macos_install.sh" $FORCE
-                ;;
-            linux)
-                bash "$SCRIPT_DIR/linux_install.sh" $FORCE
-                ;;
-            *)
-                log_error "不支持的操作系统: $OS"
-                exit 1
-                ;;
-        esac
+        apply_profile
+
+        # SSH key（所有 profile 都需要）
+        log_step "检查 SSH key..."
+        bash "$SCRIPT_DIR/scripts/setup-ssh.sh"
+
+        # Linux profile: Git HTTPS → SSH 重写
+        if [ "$PROFILE" = "ubuntu-desktop" ] || [ "$PROFILE" = "ubuntu-server" ]; then
+            if ! git config --global --get "url.git@github.com:.insteadOf" >/dev/null 2>&1; then
+                log_info "设置 Git HTTPS -> SSH 重写规则"
+                git config --global "url.git@github.com:".insteadOf "https://github.com/"
+            fi
+        fi
         echo ""
     fi
 
@@ -86,9 +160,10 @@ main() {
             echo ""
             bash "$SCRIPT_DIR/scripts/install-deps.sh"
             echo ""
-            bash "$SCRIPT_DIR/scripts/install-nvim.sh" $FORCE
-        else
-            # 交互式询问
+            local nvim_flags=""
+            [ "$FORCE" = "true" ] && nvim_flags="--force"
+            bash "$SCRIPT_DIR/scripts/install-nvim.sh" $nvim_flags
+        elif [ "$NVIM_ONLY" != "true" ]; then
             echo ""
             log_info "是否安装 Neovim (LazyVim) 开发环境？"
             log_info "（需要下载 ~200MB 依赖和插件）"
@@ -98,7 +173,7 @@ main() {
                 echo ""
                 bash "$SCRIPT_DIR/scripts/install-deps.sh"
                 echo ""
-                bash "$SCRIPT_DIR/scripts/install-nvim.sh" $FORCE
+                bash "$SCRIPT_DIR/scripts/install-nvim.sh"
             else
                 log_info "跳过 Neovim 环境安装"
                 log_info "后续可运行: bash scripts/install-deps.sh && bash scripts/install-nvim.sh"
@@ -113,7 +188,6 @@ main() {
         echo ""
         bash "$SCRIPT_DIR/scripts/install-claude-hud.sh"
     elif [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ]; then
-        # 交互式询问
         echo ""
         log_info "是否安装 Claude HUD？（Claude Code 实时状态栏: context/tools/agents/todos）"
         printf "  输入 y 安装，其他跳过: "

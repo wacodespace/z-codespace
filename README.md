@@ -31,12 +31,22 @@ bash install.sh --all
 ### 仅安装基础配置（bashrc / vimrc / tmux）
 
 ```bash
-# macOS
-bash macos_install.sh
+# 自动检测 profile：macOS → macos-desktop, Linux+SSH → ubuntu-server, 其他 → ubuntu-desktop
+bash install.sh
 
-# Linux
-bash linux_install.sh
+# 显式指定 profile
+bash install.sh --profile=ubuntu-server
+bash install.sh --server          # 语法糖 = --profile=ubuntu-server
+bash install.sh --desktop         # mac 上 = macos-desktop, linux 上 = ubuntu-desktop
 ```
+
+支持的 profile（决定装哪些 layer）：
+
+| Profile | common | desktop/shared | desktop/{os} | server |
+|---------|:---:|:---:|:---:|:---:|
+| `macos-desktop` | ✓ | ✓ | macos | – |
+| `ubuntu-desktop` | ✓ | ✓ | linux | – |
+| `ubuntu-server` | ✓ | – | – | ✓ |
 
 ### 仅安装 Neovim (LazyVim) 环境
 
@@ -108,35 +118,44 @@ bash nvim-bundle/deploy.sh
 ```text
 z-codespace/
 ├── configs/
-│   ├── common/                  # 通用配置
-│   │   ├── .bash_profile       #   Bash 登录 shell 入口，加载 .bashrc
-│   │   ├── .bashrc             #   Bash (含平台检测 / Git 别名 / AI CLI)
-│   │   ├── .vimrc              #   Vim
-│   │   └── .tmux.conf          #   Tmux (含 nvim 无缝导航)
-│   ├── macos/                   # macOS 特定 (Alacritty / Ghostty)
-│   ├── linux/                   # Linux 特定 (服务器优化)
-│   └── nvim/                    # LazyVim 配置
-│       ├── init.lua             #   入口
-│       ├── lazyvim.json         #   启用的 LazyVim extras
-│       ├── lazy-lock.json       #   插件版本锁
+│   ├── common/                  # 三 profile 都装
+│   │   ├── .bash_profile        #   Bash 登录 shell 入口
+│   │   ├── .bashrc              #   Bash (含平台检测 / Git 别名 / AI CLI)
+│   │   ├── .vimrc               #   Vim
+│   │   └── .tmux.conf           #   Tmux (含 nvim 无缝导航)
+│   ├── desktop/                 # 只在 desktop profile 装
+│   │   ├── .config/alacritty/shared.toml          # 跨 OS 共享片段
+│   │   ├── macos/.config/alacritty/alacritty.toml
+│   │   ├── macos/.config/ghostty/config
+│   │   └── linux/.config/alacritty/alacritty.toml
+│   ├── server/                  # 只在 ubuntu-server profile 装
+│   │   └── .bash_server         #   SSH 会话优化、服务器别名
+│   └── nvim/                    # 三 profile 共享（LazyVim）
+│       ├── init.lua
+│       ├── lazyvim.json
+│       ├── lazy-lock.json
 │       └── lua/
-│           ├── config/          #   基础设置 (options/keymaps/autocmds)
-│           └── plugins/         #   插件配置 (editor/lang/treesitter)
-├── scripts/                     # 自动化脚本
-│   ├── lib.sh                   #   共享工具函数
+│           ├── config/          #   options/keymaps/autocmds
+│           └── plugins/         #   editor/lang/treesitter
+├── scripts/
+│   ├── lib.sh                   #   共享工具（日志、safe_link、检测）
+│   ├── profile-common.sh        #   common layer apply 函数
+│   ├── profile-desktop.sh       #   desktop layer apply + macOS brew
+│   ├── profile-server.sh        #   server layer apply
+│   ├── profile-packages.sh      #   Linux 包管理器安装基础工具
 │   ├── setup-ssh.sh             #   自动检查 / 生成 SSH key
-│   ├── install-deps.sh          #   安装依赖 (nvim/rg/fd/node...)
+│   ├── install-deps.sh          #   安装 Neovim 及依赖
 │   ├── install-nvim.sh          #   部署 LazyVim 配置
-│   ├── uninstall-nvim.sh        #   卸载
+│   ├── uninstall-nvim.sh        #   卸载 nvim 配置
 │   ├── update-nvim.sh           #   更新插件
+│   ├── install-claude-hud.sh    #   安装 Claude Code 状态栏
 │   ├── doctor.sh                #   环境健康检查
 │   ├── offline-pack.sh          #   创建离线包
 │   └── offline-deploy.sh        #   离线部署
 ├── docs/
-│   └── DESIGN.md                # 设计文档（依赖 / LSP / 离线迁移等）
-├── install.sh                   # 统一安装入口
-├── macos_install.sh             # macOS 基础配置安装
-├── linux_install.sh             # Linux 基础配置安装
+│   ├── DESIGN.md                # 设计文档（依赖 / LSP / 离线迁移）
+│   └── superpowers/specs/       # 重构设计 spec
+├── install.sh                   # 统一安装入口（按 profile dispatch）
 └── README.md
 ```
 
