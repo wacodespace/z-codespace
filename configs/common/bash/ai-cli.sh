@@ -221,6 +221,26 @@ cc() {
     claude "$@"
 }
 
+ccf() {
+    claude --permission-mode acceptEdits "$@"
+}
+
+ccp() {
+    claude --permission-mode plan --allow-dangerously-skip-permissions "$@"
+}
+
+ccy() {
+    claude --dangerously-skip-permissions "$@"
+}
+
 cx() {
     codex "$@"
+}
+
+cxf() {
+    codex -a never -s workspace-write "$@"
+}
+
+cxy() {
+    codex --dangerously-bypass-approvals-and-sandbox "$@"
 }
