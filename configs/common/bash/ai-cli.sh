@@ -226,11 +226,11 @@ ccf() {
 }
 
 ccp() {
-    claude --permission-mode plan --allow-dangerously-skip-permissions "$@"
+    IS_SANDBOX=1 claude --permission-mode plan --allow-dangerously-skip-permissions "$@"
 }
 
 ccy() {
-    claude --dangerously-skip-permissions "$@"
+    IS_SANDBOX=1 claude --dangerously-skip-permissions "$@"
 }
 
 cx() {
