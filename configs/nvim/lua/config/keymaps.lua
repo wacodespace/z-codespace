@@ -65,7 +65,7 @@ local function yank_visual_for_ai_cli()
     return
   end
 
-  local payload = path .. ": " .. text
+  local payload = path .. ":" .. start_line .. ": " .. text
   vim.fn.setreg("+", payload)
   vim.notify("已复制到剪贴板: " .. path, vim.log.levels.INFO)
 end
