@@ -201,6 +201,144 @@ _uninstall_codex() {
     _uninstall_npm_global "@openai/codex" "codex"
 }
 
+_codex_toml_string() {
+    local value="$1"
+
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    printf '"%s"' "$value"
+}
+
+_codex_gateway_api_key() {
+    printf '%s\n' "${CODEX_GATEWAY_API_KEY:-${OPENAI_API_KEY:-}}"
+}
+
+_claude_gateway_api_key() {
+    printf '%s\n' "${CLAUDE_GATEWAY_API_KEY:-${ANTHROPIC_API_KEY:-}}"
+}
+
+_codex_gateway_enabled() {
+    [ -n "${CODEX_GATEWAY_BASE_URL:-}" ] \
+        && [ -n "$(_codex_gateway_api_key)" ]
+}
+
+_claude_gateway_enabled() {
+    [ -n "${CLAUDE_GATEWAY_BASE_URL:-}" ] \
+        && [ -n "$(_claude_gateway_api_key)" ]
+}
+
+_claude_gateway_run() {
+    local api_key=""
+
+    if ! _claude_gateway_enabled; then
+        printf '%s\n' "Claude gateway 未配置。请设置 CLAUDE_GATEWAY_BASE_URL 和 CLAUDE_GATEWAY_API_KEY。" >&2
+        printf '%s\n' "可运行: bash scripts/install-claude-gateway.sh && source ~/.bash_private" >&2
+        return 1
+    fi
+
+    api_key="$(_claude_gateway_api_key)"
+    if [ -n "${CLAUDE_GATEWAY_MODEL:-}" ]; then
+        ANTHROPIC_BASE_URL="$CLAUDE_GATEWAY_BASE_URL" \
+            ANTHROPIC_API_KEY="$api_key" \
+            ANTHROPIC_MODEL="$CLAUDE_GATEWAY_MODEL" \
+            command claude "$@"
+        return
+    fi
+
+    ANTHROPIC_BASE_URL="$CLAUDE_GATEWAY_BASE_URL" \
+        ANTHROPIC_API_KEY="$api_key" \
+        command claude "$@"
+}
+
+_claude_subscription_run() {
+    ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL= ANTHROPIC_MODEL= command claude "$@"
+}
+
+_claude_run() {
+    case "${CLAUDE_USE_GATEWAY:-0}" in
+        1|true|yes|on)
+            _claude_gateway_run "$@"
+            return
+            ;;
+    esac
+
+    _claude_subscription_run "$@"
+}
+
+_claude_gateway_status() {
+    if _claude_gateway_enabled; then
+        printf '%s\n' "Claude gateway: configured"
+        printf '%s\n' "  default: subscription via cc/ccf/ccp/ccy"
+        printf '%s\n' "  gateway: ccg/ccgf/ccgp/ccgy"
+        printf '%s\n' "  base_url: $CLAUDE_GATEWAY_BASE_URL"
+        [ -n "${CLAUDE_GATEWAY_MODEL:-}" ] && printf '%s\n' "  model: $CLAUDE_GATEWAY_MODEL"
+        return
+    fi
+
+    printf '%s\n' "Claude gateway: not configured"
+    printf '%s\n' "  default: subscription via cc/ccf/ccp/ccy"
+    printf '%s\n' "  set CLAUDE_GATEWAY_BASE_URL and CLAUDE_GATEWAY_API_KEY in ~/.bash_private"
+}
+
+_codex_gateway_run() {
+    local api_key=""
+    local -a codex_args=()
+
+    if ! _codex_gateway_enabled; then
+        printf '%s\n' "Codex gateway 未配置。请设置 CODEX_GATEWAY_BASE_URL 和 CODEX_GATEWAY_API_KEY。" >&2
+        printf '%s\n' "可运行: bash scripts/install-codex-gateway.sh && source ~/.bash_private" >&2
+        return 1
+    fi
+
+    api_key="$(_codex_gateway_api_key)"
+    codex_args+=("-c" "model_provider=openai")
+    codex_args+=("-c" "openai_base_url=$(_codex_toml_string "$CODEX_GATEWAY_BASE_URL")")
+
+    if [ -n "${CODEX_GATEWAY_MODEL:-}" ]; then
+        codex_args+=("-m" "$CODEX_GATEWAY_MODEL")
+    fi
+
+    OPENAI_API_KEY="$api_key" command codex "${codex_args[@]}" "$@"
+}
+
+_codex_subscription_run() {
+    OPENAI_API_KEY= command codex "$@"
+}
+
+_codex_run() {
+    case "${CODEX_USE_GATEWAY:-0}" in
+        1|true|yes|on)
+            _codex_gateway_run "$@"
+            return
+            ;;
+    esac
+
+    _codex_subscription_run "$@"
+}
+
+_codex_gateway_status() {
+    if _codex_gateway_enabled; then
+        printf '%s\n' "Codex gateway: configured"
+        printf '%s\n' "  default: subscription via cx/cxf/cxy"
+        printf '%s\n' "  gateway: cxg/cxgf/cxgy"
+        printf '%s\n' "  base_url: $CODEX_GATEWAY_BASE_URL"
+        [ -n "${CODEX_GATEWAY_MODEL:-}" ] && printf '%s\n' "  model: $CODEX_GATEWAY_MODEL"
+        return
+    fi
+
+    printf '%s\n' "Codex gateway: not configured"
+    printf '%s\n' "  default: subscription via cx/cxf/cxy"
+    printf '%s\n' "  set CODEX_GATEWAY_BASE_URL and CODEX_GATEWAY_API_KEY in ~/.bash_private"
+}
+
+cxgw() {
+    _codex_gateway_status
+}
+
+ccgw() {
+    _claude_gateway_status
+}
+
 icc() {
     _install_claude_code
 }
@@ -218,29 +356,57 @@ ucx() {
 }
 
 cc() {
-    claude "$@"
+    _claude_run "$@"
 }
 
 ccf() {
-    claude --permission-mode acceptEdits "$@"
+    _claude_run --permission-mode acceptEdits "$@"
 }
 
 ccp() {
-    IS_SANDBOX=1 claude --permission-mode plan --allow-dangerously-skip-permissions "$@"
+    IS_SANDBOX=1 _claude_run --permission-mode plan --allow-dangerously-skip-permissions "$@"
 }
 
 ccy() {
-    IS_SANDBOX=1 claude --dangerously-skip-permissions "$@"
+    IS_SANDBOX=1 _claude_run --dangerously-skip-permissions "$@"
+}
+
+ccg() {
+    _claude_gateway_run "$@"
+}
+
+ccgf() {
+    _claude_gateway_run --permission-mode acceptEdits "$@"
+}
+
+ccgp() {
+    IS_SANDBOX=1 _claude_gateway_run --permission-mode plan --allow-dangerously-skip-permissions "$@"
+}
+
+ccgy() {
+    IS_SANDBOX=1 _claude_gateway_run --dangerously-skip-permissions "$@"
 }
 
 cx() {
-    codex "$@"
+    _codex_run "$@"
 }
 
 cxf() {
-    codex -a never -s workspace-write "$@"
+    _codex_run -a never -s workspace-write "$@"
 }
 
 cxy() {
-    codex --dangerously-bypass-approvals-and-sandbox "$@"
+    _codex_run --dangerously-bypass-approvals-and-sandbox "$@"
+}
+
+cxg() {
+    _codex_gateway_run "$@"
+}
+
+cxgf() {
+    _codex_gateway_run -a never -s workspace-write "$@"
+}
+
+cxgy() {
+    _codex_gateway_run --dangerously-bypass-approvals-and-sandbox "$@"
 }

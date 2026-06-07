@@ -6,3 +6,21 @@
 export OSS_AK_ID="your_access_key_id"
 export OSS_AK_SECRET="your_access_key_secret"
 export OSS_ENDPOINT="cn-zhangjiakou.oss.aliyuncs.com"
+
+# --- Codex 第三方中转 ---
+# 配好后 cxg/cxgf/cxgy 显式走中转；cx/cxf/cxy 默认仍走订阅登录。
+# 真实密钥只写入 ~/.bash_private，不要提交到 git。
+# 也可以运行: bash scripts/install-codex-gateway.sh
+export CODEX_GATEWAY_BASE_URL="https://your-gateway.example.com/v1"
+export CODEX_GATEWAY_API_KEY="your_gateway_api_key"
+# export CODEX_GATEWAY_MODEL="gpt-5.1-codex-max"
+# export CODEX_USE_GATEWAY=1  # 可选：临时想让 cx/cxf/cxy 默认走中转时再打开
+
+# --- Claude 第三方中转 ---
+# 配好后 ccg/ccgf/ccgp/ccgy 显式走中转；cc/ccf/ccp/ccy 默认仍走订阅登录。
+# 真实密钥只写入 ~/.bash_private，不要提交到 git。
+# 也可以运行: bash scripts/install-claude-gateway.sh
+export CLAUDE_GATEWAY_BASE_URL="https://your-gateway.example.com"
+export CLAUDE_GATEWAY_API_KEY="your_gateway_api_key"
+# export CLAUDE_GATEWAY_MODEL="claude-sonnet-4-5"
+# export CLAUDE_USE_GATEWAY=1  # 可选：临时想让 cc/ccf/ccp/ccy 默认走中转时再打开
