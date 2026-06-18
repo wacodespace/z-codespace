@@ -149,8 +149,6 @@ z-codespace/
 │   ├── uninstall-nvim.sh        #   卸载 nvim 配置
 │   ├── update-nvim.sh           #   更新插件
 │   ├── install-claude-hud.sh    #   安装 Claude Code 状态栏
-│   ├── install-claude-gateway.sh #   写入 Claude 中转私有配置
-│   ├── install-codex-gateway.sh #   写入 Codex 中转私有配置
 │   ├── doctor.sh                #   环境健康检查
 │   ├── offline-pack.sh          #   创建离线包
 │   └── offline-deploy.sh        #   离线部署
@@ -219,8 +217,9 @@ bash scripts/doctor.sh
 - Git 快捷键 (输入 `gg` 查看)
 - GPU 监控别名 (NVIDIA: `nv` / AMD: `rc`)
 - AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex)
-- Codex 启动别名：`cx` / `cxf` / `cxy` 默认走订阅登录，`cxg` / `cxgf` / `cxgy` 显式走第三方中转，`cxgw` 查看中转配置状态
-- Claude 启动别名：`cc` / `ccf` / `ccp` / `ccy` 默认走订阅登录，`ccg` / `ccgf` / `ccgp` / `ccgy` 显式走第三方中转，`ccgw` 查看中转配置状态
+- Codex 启动别名：`cx` / `cxf` / `cxy`
+- Claude 启动别名：`cc` / `ccf` / `ccy`
+- 第三方中转建议交给专用切换器管理，例如 macOS 上使用 CC Switch；本仓库不再保存或切换 AI API Key / Base URL
 
 ### SSH key
 
@@ -236,42 +235,6 @@ macOS / Linux 基础安装都会执行 `scripts/setup-ssh.sh`：
 ```bash
 cp .bash_private.example ~/.bash_private
 vim ~/.bash_private
-```
-
-### Codex 第三方中转
-
-不需要改 `~/.codex/config.toml`。在 `~/.bash_private` 里配置 `CODEX_GATEWAY_BASE_URL` 和 `CODEX_GATEWAY_API_KEY` 后，默认 `cx` / `cxf` / `cxy` 仍走 ChatGPT 订阅登录；只有显式运行 `cxg` / `cxgf` / `cxgy` 时，才会通过 `codex -c openai_base_url=...` 临时走中转。
-
-交互式写入：
-
-```bash
-bash scripts/install-codex-gateway.sh
-source ~/.bash_private
-cxgw
-```
-
-使用中转启动：
-
-```bash
-cxg
-```
-
-### Claude 第三方中转
-
-不需要改 Claude Code 的 `settings.json`。在 `~/.bash_private` 里配置 `CLAUDE_GATEWAY_BASE_URL` 和 `CLAUDE_GATEWAY_API_KEY` 后，默认 `cc` / `ccf` / `ccp` / `ccy` 仍走 Claude 订阅登录；只有显式运行 `ccg` / `ccgf` / `ccgp` / `ccgy` 时，才会临时设置 `ANTHROPIC_BASE_URL` 和 `ANTHROPIC_API_KEY` 走中转。
-
-交互式写入：
-
-```bash
-bash scripts/install-claude-gateway.sh
-source ~/.bash_private
-ccgw
-```
-
-使用中转启动：
-
-```bash
-ccg
 ```
 
 ## 故障排查
