@@ -20,12 +20,20 @@
 
 ## 快速开始
 
-### 完整安装（基础配置 + Neovim 环境）
+### 完整安装（基础配置 + Neovim + Claude HUD + AI 中转切换器）
 
 ```bash
 git clone https://github.com/wacodespace/z-codespace.git
 cd z-codespace
 bash install.sh --all
+```
+
+### 仅安装 AI 中转切换器
+
+```bash
+bash install.sh --ai-switch
+# macOS → CC Switch 桌面 App (brew cask)
+# Linux → cc-switch-cli (~/.local/bin/cc-switch)
 ```
 
 ### 仅安装基础配置（bashrc / vimrc / tmux）
@@ -219,7 +227,8 @@ bash scripts/doctor.sh
 - AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex)
 - Codex 启动别名：`cx` / `cxf` / `cxy`
 - Claude 启动别名：`cc` / `ccf` / `ccy`
-- 第三方中转建议交给专用切换器管理，例如 macOS 上使用 CC Switch；本仓库不再保存或切换 AI API Key / Base URL
+- 第三方中转交给专用切换器管理（`bash install.sh --ai-switch` 安装）：macOS 用 [CC Switch](https://github.com/farion1231/cc-switch) 桌面 App，Linux server 用 [cc-switch-cli](https://github.com/SaladDay/cc-switch-cli)
+- 本仓库只负责安装切换器，**不保存 AI API Key / Base URL**；provider 列表由切换器自己管理，新增中转站在切换器内操作即可，`cc` / `cx` 会自动读取其写入的原生 config
 
 ### SSH key
 

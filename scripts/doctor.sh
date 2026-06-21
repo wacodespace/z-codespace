@@ -186,6 +186,7 @@ main() {
     check_cmd npm     false "Node 包管理"
     check_cmd pip3    false "Python 包管理"
     check_cmd claude  false "Claude Code CLI (终端 cc；与 <Space>xs 剪贴板配合)"
+    check_cmd cc-switch false "AI 中转切换器 (headless: cc-switch-cli；macOS GUI 版无同名 CLI)"
     echo ""
 
     log_step "--- 配置状态 ---"
