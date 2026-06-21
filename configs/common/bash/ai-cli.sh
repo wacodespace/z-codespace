@@ -2,6 +2,8 @@
 # 由 configs/common/.bashrc 的 BASH_DIR loader 自动 source
 # 依赖：bashrc 已 export AI_NPM_PREFIX
 # 用户面：icc/ucc (Claude Code 装/卸) / icx/ucx (Codex 装/卸) / cc / cx
+# 第三方中转：交给 CC Switch (macOS) / cc-switch-cli (headless) 管理，见
+#   scripts/install-ai-switcher.sh；本文件 launcher 保持裸调，读取切换器写入的原生 config
 # ============================================================
 
 _ai_fetch() {
