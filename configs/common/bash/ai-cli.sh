@@ -1,7 +1,7 @@
-# ai-cli.sh - Claude Code / Codex CLI 安装管理函数
+# ai-cli.sh - Claude Code / Codex / Grok CLI 安装管理函数
 # 由 configs/common/.bashrc 的 BASH_DIR loader 自动 source
 # 依赖：bashrc 已 export AI_NPM_PREFIX
-# 用户面：icc/ucc (Claude Code 装/卸) / icx/ucx (Codex 装/卸) / cc / cx
+# 用户面：icc/ucc (Claude Code 装/卸) / icx/ucx (Codex 装/卸) / igk/ugk (Grok 装/卸) / cc / cx / gk
 # 第三方中转：交给 CC Switch (macOS) / cc-switch-cli (headless) 管理，见
 #   scripts/install-ai-switcher.sh；本文件 launcher 保持裸调，读取切换器写入的原生 config
 # ============================================================
@@ -174,6 +174,21 @@ _install_codex() {
     _ai_install_npm_global_managed "@openai/codex" "codex"
 }
 
+_install_grok() {
+    _ai_fetch "https://x.ai/cli/install.sh" | bash
+    hash -r
+
+    if command -v grok >/dev/null 2>&1; then
+        printf '%s\n' "grok 安装完成: $(command -v grok)"
+        grok --version 2>/dev/null || true
+        return 0
+    fi
+
+    printf '%s\n' "grok 已安装，但当前 shell 尚未在 PATH 中找到它。" >&2
+    printf '%s\n' "请重启终端，或执行: export PATH=\"\$HOME/.grok/bin:\$PATH\"" >&2
+    return 1
+}
+
 _uninstall_npm_global() {
     local package_name="$1"
     local command_name="$2"
@@ -203,12 +218,56 @@ _uninstall_codex() {
     _uninstall_npm_global "@openai/codex" "codex"
 }
 
+_remove_grok_path_link() {
+    local link_path="$1"
+    local target=""
+
+    [ -L "$link_path" ] || return 0
+    target="$(readlink "$link_path" 2>/dev/null || true)"
+
+    case "$target" in
+        "$HOME/.grok/bin/"*|"$HOME/.grok/bin/grok"|"$HOME/.grok/bin/agent")
+            rm -f "$link_path"
+            ;;
+    esac
+}
+
+_uninstall_grok() {
+    local removed=0
+
+    for name in grok agent; do
+        if [ -e "$HOME/.grok/bin/$name" ] || [ -L "$HOME/.grok/bin/$name" ]; then
+            rm -f "$HOME/.grok/bin/$name"
+            removed=1
+        fi
+
+        _remove_grok_path_link "$HOME/.local/bin/$name"
+        _remove_grok_path_link "/usr/local/bin/$name"
+    done
+
+    hash -r
+    if command -v grok >/dev/null 2>&1; then
+        printf '%s\n' "grok 仍存在：$(command -v grok)"
+        return 1
+    fi
+
+    if [ "$removed" -eq 1 ]; then
+        printf '%s\n' "grok 已卸载。保留 ~/.grok/auth.json、config.toml 和 downloads。"
+    else
+        printf '%s\n' "grok 未安装。"
+    fi
+}
+
 _claude_run() {
     command claude "$@"
 }
 
 _codex_run() {
     command codex "$@"
+}
+
+_grok_run() {
+    command grok "$@"
 }
 
 icc() {
@@ -219,12 +278,20 @@ icx() {
     _install_codex
 }
 
+igk() {
+    _install_grok
+}
+
 ucc() {
     _uninstall_claude_code
 }
 
 ucx() {
     _uninstall_codex
+}
+
+ugk() {
+    _uninstall_grok
 }
 
 cc() {
@@ -249,4 +316,8 @@ cxf() {
 
 cxy() {
     _codex_run --dangerously-bypass-approvals-and-sandbox "$@"
+}
+
+gk() {
+    _grok_run "$@"
 }
