@@ -224,11 +224,12 @@ bash scripts/doctor.sh
 - 跨平台别名（macOS/Linux）
 - Git 快捷键 (输入 `gg` 查看)
 - GPU 监控别名 (NVIDIA: `nv` / AMD: `rc`)
-- AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex)
+- AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex, `igk`/`ugk` 安装/卸载 Grok)
 - Codex 启动别名：`cx` / `cxf` / `cxy`
 - Claude 启动别名：`cc` / `ccf` / `ccy`
+- Grok 启动别名：`gk`
 - 第三方中转交给专用切换器管理（`bash install.sh --ai-switch` 安装）：macOS 用 [CC Switch](https://github.com/farion1231/cc-switch) 桌面 App，Linux server 用 [cc-switch-cli](https://github.com/SaladDay/cc-switch-cli)
-- 本仓库只负责安装切换器，**不保存 AI API Key / Base URL**；provider 列表由切换器自己管理，新增中转站在切换器内操作即可，`cc` / `cx` 会自动读取其写入的原生 config
+- 本仓库只负责安装切换器，**不保存 AI API Key / Base URL**；provider 列表由切换器自己管理，新增中转站在切换器内操作即可，`cc` / `cx` 会自动读取其写入的原生 config。Grok 使用 xAI 官方安装器和 `~/.grok` 原生配置
 
 ### SSH key
 
