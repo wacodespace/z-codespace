@@ -20,7 +20,7 @@
 # 可选:
 #   fzf        — 命令行模糊搜索
 #   tmux       — 终端复用
-#   lazygit    — Git TUI
+#   lazygit    — Git TUI (macOS: brew; Linux: GitHub Release 静态二进制，自动安装到 ~/.local/bin)
 #   xclip/xsel — Linux 系统剪贴板支持
 #   claude     — Claude Code CLI（终端 cc；与 nvim <Space>xs 剪贴板配合）
 # ============================================================
@@ -141,7 +141,7 @@ install_deps_linux() {
             ;;
         *)
             log_warn "未知包管理器 ($pkg_mgr)，请手动安装依赖"
-            log_warn "需要: git curl gcc make ripgrep fd python3 tmux"
+            log_warn "需要: git curl gcc make ripgrep fd python3 tmux (lazygit 会尝试通过 GitHub release 自动安装)"
             ;;
     esac
 
@@ -150,6 +150,9 @@ install_deps_linux() {
 
     # Node.js
     install_node_if_missing
+
+    # lazygit (覆盖 headless Linux 和 GUI Linux)
+    install_lazygit_linux
 }
 
 # --- 手动安装 ripgrep (针对无 rg 的 yum 系统) ---
@@ -186,6 +189,79 @@ install_fd_binary() {
     chmod +x "$HOME/.local/bin/fd"
     rm -rf "$tmpdir"
     log_ok "fd 安装到 ~/.local/bin/fd"
+}
+
+# --- 安装 lazygit (Linux) ---
+# 使用 GitHub Releases 提供的静态二进制，直接放到 ~/.local/bin
+# - 无需 sudo
+# - 同时覆盖 headless Linux (server) 和带 GUI 的 Linux (desktop)
+# - 架构支持 x86_64 / arm64
+# - 自动尝试获取最新版本，失败则回退到已知稳定版
+install_lazygit_linux() {
+    if has_cmd lazygit; then
+        log_ok "lazygit 已安装: $(lazygit --version 2>/dev/null | head -n1 || echo 'lazygit')"
+        return 0
+    fi
+
+    log_step "安装 lazygit (Linux binary) 到 ~/.local/bin ..."
+
+    local version
+    # 动态获取最新版（使用 GitHub API）
+    version=$(curl -fsSL --connect-timeout 10 -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" 2>/dev/null \
+        | grep -o '"tag_name": *"v[^"]*"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/' || true)
+
+    if [ -z "$version" ]; then
+        version="0.62.2"
+        log_warn "无法从 GitHub API 获取最新版本，使用回退版本 v${version}"
+    fi
+
+    local filename
+    case "$ARCH" in
+        x86_64)
+            filename="lazygit_${version}_linux_x86_64.tar.gz"
+            ;;
+        arm64)
+            filename="lazygit_${version}_linux_arm64.tar.gz"
+            ;;
+        *)
+            log_error "不支持的架构: $ARCH"
+            return 1
+            ;;
+    esac
+
+    local url="https://github.com/jesseduffield/lazygit/releases/download/v${version}/${filename}"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    log_info "下载: $url"
+    if ! curl -fL --connect-timeout 15 --retry 3 --retry-delay 2 "$url" -o "$tmpdir/lazygit.tar.gz"; then
+        log_error "lazygit 下载失败"
+        rm -rf "$tmpdir"
+        return 1
+    fi
+
+    if ! tar xzf "$tmpdir/lazygit.tar.gz" -C "$tmpdir"; then
+        log_error "解压 lazygit 失败"
+        rm -rf "$tmpdir"
+        return 1
+    fi
+
+    mkdir -p "$HOME/.local/bin"
+    if [ -f "$tmpdir/lazygit" ]; then
+        cp "$tmpdir/lazygit" "$HOME/.local/bin/lazygit"
+        chmod +x "$HOME/.local/bin/lazygit"
+        log_ok "lazygit 安装成功"
+    else
+        log_error "解压后未找到 lazygit 二进制文件"
+        rm -rf "$tmpdir"
+        return 1
+    fi
+    rm -rf "$tmpdir"
+
+    # 验证
+    if has_cmd lazygit; then
+        log_ok "当前 lazygit: $(lazygit --version 2>/dev/null | head -n1)"
+    fi
 }
 
 # --- 构建 Neovim 下载地址列表 ---
