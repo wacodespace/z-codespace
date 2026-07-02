@@ -159,7 +159,7 @@ Linux 发行版/包管理器检测通过 `/etc/os-release` 的 `$ID` 字段和 `
 | fd | 文件搜索 (telescope) | brew | apt/dnf/手动 |
 | fzf | 命令行模糊搜索 | brew | apt/dnf |
 | tmux | 终端复用 | brew | apt/dnf/yum |
-| lazygit | Git TUI | brew | 手动 |
+| lazygit | Git TUI | brew | GitHub Release binary (auto via install-deps.sh) |
 | xclip | 剪贴板 (Linux) | N/A | apt/dnf |
 
 ### 不需要的
