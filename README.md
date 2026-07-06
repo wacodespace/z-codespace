@@ -36,6 +36,19 @@ bash install.sh --ai-switch
 # Linux → cc-switch-cli (~/.local/bin/cc-switch)
 ```
 
+### 仅安装 cmux（macOS，并行 AI agent 终端）
+
+```bash
+bash install.sh --cmux
+# 基于 libghostty 的原生 macOS 终端，专为并行管理多个 Claude Code / Codex /
+# Gemini CLI 会话设计：左侧会话栏 + 会话持久化 + agent 完成/需要输入时通知。
+# 直接读取 ~/.config/ghostty/config，字体/配色/透明度自动复用，无需重复配置。
+# 左侧会话栏是 cmux 自己的原生 UI，跟深色毛玻璃观感统一：
+# cmux 设置(Cmd+,) → Appearance/Sidebar → 预设选 HUD Glass，
+# Tint Color 调成 #272822 对齐 Monokai 配色。
+# 仅支持 macOS。https://github.com/manaflow-ai/cmux
+```
+
 ### 仅安装基础配置（bashrc / vimrc / tmux）
 
 ```bash
