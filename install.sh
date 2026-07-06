@@ -16,7 +16,6 @@
 #   bash install.sh --nvim-only                # 仅 Neovim 环境
 #   bash install.sh --claude-hud               # 仅 Claude HUD
 #   bash install.sh --ai-switch                # 仅 AI 中转切换器
-#   bash install.sh --cmux                     # 仅 cmux（macOS，并行 AI agent 终端）
 #   bash install.sh --force                    # 强制覆盖
 # ============================================================
 
@@ -37,8 +36,6 @@ INSTALL_CLAUDE_HUD=false
 CLAUDE_HUD_ONLY=false
 INSTALL_AI_SWITCH=false
 AI_SWITCH_ONLY=false
-INSTALL_CMUX=false
-CMUX_ONLY=false
 
 # --- 自动检测 profile ---
 detect_profile() {
@@ -68,7 +65,6 @@ while [[ $# -gt 0 ]]; do
         --nvim-only)      NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
         --claude-hud)     CLAUDE_HUD_ONLY=true; INSTALL_CLAUDE_HUD=true; shift ;;
         --ai-switch)      AI_SWITCH_ONLY=true; INSTALL_AI_SWITCH=true; shift ;;
-        --cmux)           CMUX_ONLY=true; INSTALL_CMUX=true; shift ;;
         --force)          FORCE="true"; shift ;;
         -h|--help)
             cat <<'EOF'
@@ -86,7 +82,6 @@ Profile（决定装哪些 layer）:
   --nvim-only               仅 Neovim 环境
   --claude-hud              仅 Claude HUD 状态栏
   --ai-switch               仅 AI 中转切换器 (macOS: CC Switch / Linux: cc-switch-cli)
-  --cmux                    仅 cmux（macOS 专用，Ghostty 内核的并行 AI agent 终端）
 
 其它:
   --force                   强制覆盖，不备份
@@ -156,7 +151,7 @@ setup_git_global_config() {
 
 main() {
     # nvim-only / claude-hud-only / ai-switch-only 时不需要 profile
-    if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$CMUX_ONLY" != "true" ]; then
+    if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; then
         if [ -z "$PROFILE" ]; then
             PROFILE="$(detect_profile)"
             log_info "自动检测 profile: $PROFILE"
@@ -171,7 +166,7 @@ main() {
     echo ""
 
     # --- 基础配置（按 profile dispatch） ---
-    if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$CMUX_ONLY" != "true" ]; then
+    if [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; then
         apply_profile
         setup_git_global_config
 
@@ -183,7 +178,7 @@ main() {
     fi
 
     # --- Neovim 环境 ---
-    if [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$CMUX_ONLY" != "true" ]; then
+    if [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; then
         if [ "$INSTALL_NVIM" = "true" ]; then
             log_step "安装 Neovim (LazyVim) 环境..."
             echo ""
@@ -216,7 +211,7 @@ main() {
         log_step "安装 Claude HUD 状态栏插件..."
         echo ""
         bash "$SCRIPT_DIR/scripts/install-claude-hud.sh"
-    elif [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$CMUX_ONLY" != "true" ]; then
+    elif [ "$NVIM_ONLY" != "true" ] && [ "$CLAUDE_HUD_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; then
         echo ""
         log_info "是否安装 Claude HUD？（Claude Code 实时状态栏: context/tools/agents/todos）"
         printf "  输入 y 安装，其他跳过: "
@@ -236,14 +231,6 @@ main() {
         log_step "安装 AI 第三方中转切换器..."
         echo ""
         bash "$SCRIPT_DIR/scripts/install-ai-switcher.sh"
-    fi
-
-    # --- cmux（flag 驱动，不交互；默认流程不触发） ---
-    if [ "$INSTALL_CMUX" = "true" ]; then
-        echo ""
-        log_step "安装 cmux..."
-        echo ""
-        bash "$SCRIPT_DIR/scripts/install-cmux.sh"
     fi
 
     echo ""
