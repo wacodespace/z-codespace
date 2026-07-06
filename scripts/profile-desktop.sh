@@ -59,6 +59,13 @@ install_desktop_apps_macos() {
     else
         log_ok "Ghostty 已安装"
     fi
+    if ! has_cmd cmux; then
+        log_info "安装 cmux（libghostty 内核，读取同一份 ~/.config/ghostty/config）..."
+        brew tap manaflow-ai/cmux
+        brew install --cask cmux
+    else
+        log_ok "cmux 已安装"
+    fi
     if ! ls ~/Library/Fonts/MesloLG*NerdFont* &>/dev/null; then
         log_info "安装 MesloLG Nerd Font..."
         brew install --cask font-meslo-lg-nerd-font
