@@ -14,4 +14,29 @@ apply_server() {
     safe_link "$PROJECT_ROOT/configs/server/.bash_server" "$HOME/.bash_server" "$force"
     # 当前用户的 Ubuntu server 即阿里 GPU 集群；未来若有其它 site，需在此处分支或抽出 apply_site_*
     safe_link "$PROJECT_ROOT/configs/site/aliyun-gpu.sh"  "$HOME/.bash_site"   "$force"
+
+    # claude-squad profile 配置（agent 由 profile 选择器切换：claude / codex / opencode）
+    safe_link "$PROJECT_ROOT/configs/server/.claude-squad/config.json" \
+              "$HOME/.claude-squad/config.json" "$force"
+    install_claude_squad
+}
+
+# --- claude-squad：tmux + git worktree 多 agent 会话管理 TUI（命令: cs）---
+install_claude_squad() {
+    if has_cmd cs; then
+        log_ok "claude-squad 已安装"
+        return 0
+    fi
+    if ! has_cmd curl; then
+        log_warn "未找到 curl，跳过 claude-squad 安装"
+        log_warn "手动安装见: https://github.com/smtg-ai/claude-squad"
+        return 0
+    fi
+    log_step "安装 claude-squad..."
+    if curl -fsSL https://raw.githubusercontent.com/smtg-ai/claude-squad/main/install.sh | bash; then
+        log_ok "claude-squad 安装完成（新建 session 时用 profile 选择器切换 agent）"
+    else
+        log_warn "claude-squad 安装失败（非致命）"
+        log_warn "手动安装见: https://github.com/smtg-ai/claude-squad"
+    fi
 }
