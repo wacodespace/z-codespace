@@ -137,7 +137,8 @@ z-codespace/
 │   │   ├── macos/.config/ghostty/config
 │   │   └── linux/.config/alacritty/alacritty.toml
 │   ├── server/                  # 只在 ubuntu-server profile 装
-│   │   └── .bash_server         #   SSH 会话优化、服务器别名
+│   │   ├── .bash_server         #   SSH 会话优化、服务器别名
+│   │   └── .claude-squad/config.json  # claude-squad 多 agent 会话 TUI（claude/codex/opencode）
 │   └── nvim/                    # 三 profile 共享（LazyVim）
 │       ├── init.lua
 │       ├── lazyvim.json
