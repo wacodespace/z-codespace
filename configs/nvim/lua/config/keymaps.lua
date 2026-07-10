@@ -38,13 +38,11 @@ map("x", "<leader>p", [["_dP]], { desc = "粘贴（保留寄存器）" })
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "退出终端模式" })
 
 -- AI CLI：Visual 选中 → 剪贴板「绝对路径: 代码段」（粘贴到 Codex / Claude Code 等）
-local function yank_visual_for_ai_cli()
-  local start_pos = vim.fn.getpos("'<")
-  local end_pos = vim.fn.getpos("'>")
-  local start_line = start_pos[2]
-  local end_line = end_pos[2]
+local function yank_visual_for_ai_cli(opts)
+  local start_line = opts.line1
+  local end_line = opts.line2
 
-  if start_line <= 0 or end_line <= 0 then
+  if not start_line or not end_line or start_line <= 0 or end_line <= 0 then
     vim.notify("没有可复制的选中内容。", vim.log.levels.WARN)
     return
   end
@@ -65,10 +63,17 @@ local function yank_visual_for_ai_cli()
     return
   end
 
-  local payload = path .. ":" .. start_line .. ": " .. text
+  local location = path .. ":" .. start_line
+  if end_line ~= start_line then
+    location = location .. "-" .. end_line
+  end
+
+  local payload = location .. ":\n" .. text
   vim.fn.setreg("+", payload)
-  vim.notify("已复制到剪贴板: " .. path, vim.log.levels.INFO)
+  vim.notify("已复制到剪贴板: " .. location, vim.log.levels.INFO)
 end
 
+vim.api.nvim_create_user_command("YankVisualForAiCli", yank_visual_for_ai_cli, { range = true, force = true })
+
 map("n", "<leader>x", "<nop>", { desc = "AI CLI" })
-map("v", "<leader>xs", yank_visual_for_ai_cli, { desc = "复制「绝对路径 + 选中代码」到剪贴板（供 AI CLI 粘贴）" })
+map("x", "<leader>xs", ":YankVisualForAiCli<cr>", { desc = "复制「绝对路径 + 选中代码」到剪贴板（供 AI CLI 粘贴）" })
