@@ -1,0 +1,17 @@
+# ~/.ssh/config.site - SSH 站点配置（含主机名/IP），不进 git 仓库
+# 使用方法：cp configs/site/ssh_config.site.example configs/site/ssh_config.site，然后填入真实值
+# 生效方式：scripts/profile-common.sh 会把它软链到 ~/.ssh/config.site，
+#          scripts/setup-ssh.sh 会在 ~/.ssh/config 里加一行 Include ~/.ssh/config.site
+# ============================================================
+
+Host example-host
+  HostName 203.0.113.10
+  User deploy
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+  # 心跳保活，避免空闲被服务器踢掉
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  # 压缩（高延时低带宽场景有帮助）
+  Compression yes

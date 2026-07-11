@@ -5,3 +5,6 @@ nvim-offline-*.tar.gz
 
 # Neovim 本地插件配置（机器特定，不提交）
 configs/nvim/lua/plugins/local.lua
+
+# SSH 站点配置（含真实主机名/IP，机器特定，不提交）
+configs/site/ssh_config.site

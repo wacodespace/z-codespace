@@ -15,4 +15,12 @@ apply_common() {
     safe_link "$PROJECT_ROOT/configs/common/.bashrc"       "$HOME/.bashrc"       "$force"
     safe_link "$PROJECT_ROOT/configs/common/.vimrc"        "$HOME/.vimrc"        "$force"
     safe_link "$PROJECT_ROOT/configs/common/.tmux.conf"    "$HOME/.tmux.conf"    "$force"
+
+    # SSH site config 软链（所有 profile 共用，setup-ssh.sh 会把 Include 写进 ~/.ssh/config）
+    local site_ssh="$PROJECT_ROOT/configs/site/ssh_config.site"
+    if [ -f "$site_ssh" ]; then
+        mkdir -p "$HOME/.ssh"
+        chmod 700 "$HOME/.ssh"
+        safe_link "$site_ssh" "$HOME/.ssh/config.site" "$force"
+    fi
 }
