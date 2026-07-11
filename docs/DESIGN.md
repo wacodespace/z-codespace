@@ -74,7 +74,6 @@ z-codespace/
 │   ├── install-nvim.sh          # 部署 LazyVim
 │   ├── uninstall-nvim.sh
 │   ├── update-nvim.sh
-│   ├── install-claude-hud.sh
 │   ├── doctor.sh
 │   ├── offline-pack.sh
 │   └── offline-deploy.sh
