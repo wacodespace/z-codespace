@@ -20,7 +20,7 @@
 
 ## 快速开始
 
-### 完整安装（基础配置 + Neovim + Claude HUD + AI 中转切换器）
+### 完整安装（基础配置 + Neovim + AI 中转切换器）
 
 ```bash
 git clone https://github.com/wacodespace/z-codespace.git
@@ -157,7 +157,6 @@ z-codespace/
 │   ├── install-nvim.sh          #   部署 LazyVim 配置
 │   ├── uninstall-nvim.sh        #   卸载 nvim 配置
 │   ├── update-nvim.sh           #   更新插件
-│   ├── install-claude-hud.sh    #   安装 Claude Code 状态栏
 │   ├── doctor.sh                #   环境健康检查
 │   ├── offline-pack.sh          #   创建离线包
 │   └── offline-deploy.sh        #   离线部署
