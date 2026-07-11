@@ -108,6 +108,26 @@ generate_key() {
     log_ok "SSH key 已生成: $KEY_FILE.pub"
 }
 
+ensure_site_ssh_config() {
+    [ -f "$HOME/.ssh/config.site" ] || return 0
+
+    touch "$SSH_CONFIG_FILE"
+    chmod 600 "$SSH_CONFIG_FILE"
+
+    if grep -q "^Include ~/.ssh/config.site" "$SSH_CONFIG_FILE" 2>/dev/null; then
+        log_ok "SSH config 已包含 Include ~/.ssh/config.site"
+        return 0
+    fi
+
+    log_info "添加 Include ~/.ssh/config.site 到 SSH config"
+    local tmp
+    tmp="$(mktemp)"
+    { printf 'Include ~/.ssh/config.site\n\n'; cat "$SSH_CONFIG_FILE"; } > "$tmp"
+    mv "$tmp" "$SSH_CONFIG_FILE"
+    chmod 600 "$SSH_CONFIG_FILE"
+    log_ok "SSH config 已更新（Include ~/.ssh/config.site）"
+}
+
 ensure_github_known_host() {
     if ! command -v ssh-keyscan >/dev/null 2>&1; then
         log_warn "未找到 ssh-keyscan，跳过 GitHub known_hosts 初始化"
@@ -159,6 +179,7 @@ main() {
         generate_key "$(detect_comment)"
     fi
 
+    ensure_site_ssh_config
     ensure_github_ssh_config "$key"
     ensure_github_known_host
     print_next_step "$key"
