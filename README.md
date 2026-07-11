@@ -207,6 +207,7 @@ bash scripts/doctor.sh
 | `<Space>l` | Lazy 插件管理 |
 | `<C-\>` | 浮动终端 |
 | `<C-h/j/k/l>` | 窗口 / tmux pane 切换 |
+| `<Space><Left>` / `<Space><Right>` | Neo-tree 窗口左/右调整（只在 Neo-tree 内生效） |
 | `<Space>xs` (Visual) | 复制「绝对路径 + 选中代码」到剪贴板（粘贴到 Codex / Claude Code 等） |
 
 ### tmux
