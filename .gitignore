@@ -8,3 +8,9 @@ configs/nvim/lua/plugins/local.lua
 
 # SSH 站点配置（含真实主机名/IP，机器特定，不提交）
 configs/site/ssh_config.site
+
+# Claude Code 本地权限配置（可能含真实主机 IP，机器特定，不提交）
+**/.claude/settings.local.json
+
+# 本地日志
+nvim.log
