@@ -3,6 +3,9 @@
 # ============================================================
 
 # --- 阿里云 OSS ---
+# 首次运行 oss 命令时，这些变量会被写入 ~/.ossutilconfig（600）作为凭据文件，
+# 之后 ossutil 从配置文件读取，AK/SK 不会出现在命令行参数里（避免 ps 可见）。
+# 更换凭据时：更新此文件后删除 ~/.ossutilconfig 重新生成。
 export OSS_AK_ID="your_access_key_id"
 export OSS_AK_SECRET="your_access_key_secret"
 export OSS_ENDPOINT="cn-zhangjiakou.oss.aliyuncs.com"
