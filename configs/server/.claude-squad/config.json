@@ -3,6 +3,7 @@
   "profiles": [
     { "name": "claude", "program": "claude" },
     { "name": "codex", "program": "codex" },
+    { "name": "grok", "program": "grok" },
     { "name": "opencode", "program": "opencode" }
   ]
 }
