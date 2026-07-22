@@ -321,3 +321,7 @@ cxy() {
 gk() {
     _grok_run "$@"
 }
+
+gky() {
+    _grok_run --permission-mode bypassPermissions "$@"
+}
