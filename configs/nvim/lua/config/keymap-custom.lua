@@ -1,6 +1,13 @@
 -- 自定义快捷键配置
 -- 修改或禁用默认的 LazyVim 快捷键
 
+-- 切换 LSP diagnostics 显示，仅对当前 Neovim 会话生效
+vim.keymap.set("n", "<leader>ud", function()
+  local enabled = vim.diagnostic.is_enabled()
+  vim.diagnostic.enable(not enabled)
+  vim.notify(enabled and "LSP diagnostics 已关闭" or "LSP diagnostics 已开启")
+end, { desc = "切换 LSP diagnostics" })
+
 -- 如果你想禁用 c + c 打开配置文件浏览器的行为
 -- vim.keymap.del('n', '<leader>cc')
 
