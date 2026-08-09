@@ -174,3 +174,25 @@ unset _BASH_DIR
 export PATH="$HOME/.grok/bin:$PATH"
 [[ -r "$HOME/.grok/completions/bash/grok.bash" ]] && source "$HOME/.grok/completions/bash/grok.bash"
 # <<< grok installer <<<
+
+# --- 防止终端 prompt hooks 泄漏到 tmux/子 Bash ---
+# cmux/Ghostty 会把 PROMPT_COMMAND 导出；子 Bash 只能继承函数名，不能继承
+# 对应的函数定义，于是会在每次显示提示符时报 "command not found"。
+if [[ -n "${PROMPT_COMMAND:-}" ]]; then
+    _prompt_command_remainder=$PROMPT_COMMAND
+    _prompt_command_remainder=${_prompt_command_remainder//__bp_precmd_invoke_cmd/}
+    _prompt_command_remainder=${_prompt_command_remainder//_cmux_prompt_command/}
+    _prompt_command_remainder=${_prompt_command_remainder//__bp_interactive_mode/}
+    _prompt_command_remainder=${_prompt_command_remainder//[[:space:];:]/}
+
+    if [[ -z "$_prompt_command_remainder" ]] \
+        && ! declare -F __bp_precmd_invoke_cmd >/dev/null \
+        && ! declare -F _cmux_prompt_command >/dev/null \
+        && ! declare -F __bp_interactive_mode >/dev/null; then
+        unset PROMPT_COMMAND
+    fi
+    unset _prompt_command_remainder
+fi
+
+# 保留当前 shell 的 prompt integration，但不要再把它传给 tmux/子 Bash。
+export -n PROMPT_COMMAND 2>/dev/null || true
