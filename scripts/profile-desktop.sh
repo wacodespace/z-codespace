@@ -49,7 +49,10 @@ install_desktop_apps_macos() {
     log_step "macOS 桌面应用..."
     if ! has_cmd alacritty; then
         log_info "安装 Alacritty..."
-        brew install --cask alacritty
+        if ! brew install --cask alacritty; then
+            log_warn "Alacritty cask 已被 Homebrew 禁用，跳过安装"
+            log_warn "macOS 将继续使用 Ghostty / cmux"
+        fi
     else
         log_ok "Alacritty 已安装"
     fi
