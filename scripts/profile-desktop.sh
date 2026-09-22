@@ -17,11 +17,13 @@ apply_desktop_shared() {
 
 apply_desktop_macos() {
     local force="${1:-false}"
-    log_step "应用 desktop/macos 层（alacritty / ghostty）..."
+    log_step "应用 desktop/macos 层（alacritty / ghostty / cmux）..."
     safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/alacritty/alacritty.toml" \
               "$HOME/.config/alacritty/alacritty.toml" "$force"
     safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/ghostty/config" \
               "$HOME/.config/ghostty/config" "$force"
+    safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/ghostty/config" \
+              "$HOME/Library/Application Support/com.cmuxterm.app/config.ghostty" "$force"
 }
 
 apply_desktop_linux() {
