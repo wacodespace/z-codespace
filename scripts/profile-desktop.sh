@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # z-codespace/scripts/profile-desktop.sh
-# desktop layer：alacritty 共享片段 + OS 特定终端配置
+# desktop layer：alacritty 共享片段 + OS 特定桌面配置
 # 由 install.sh source 后通过 apply_desktop_* / install_desktop_apps_macos 调用
 # ============================================================
 
@@ -17,13 +17,15 @@ apply_desktop_shared() {
 
 apply_desktop_macos() {
     local force="${1:-false}"
-    log_step "应用 desktop/macos 层（alacritty / ghostty / cmux）..."
+    log_step "应用 desktop/macos 层（alacritty / ghostty / cmux / flameshot）..."
     safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/alacritty/alacritty.toml" \
               "$HOME/.config/alacritty/alacritty.toml" "$force"
     safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/ghostty/config" \
               "$HOME/.config/ghostty/config" "$force"
     safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/ghostty/config" \
               "$HOME/Library/Application Support/com.cmuxterm.app/config.ghostty" "$force"
+    safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/flameshot/flameshot.ini" \
+              "$HOME/.config/flameshot/flameshot.ini" "$force"
 }
 
 apply_desktop_linux() {
@@ -45,6 +47,25 @@ install_homebrew() {
     else
         log_ok "Homebrew 已安装"
     fi
+}
+
+install_flameshot_macos() {
+    local app_path="/Applications/Flameshot.app"
+    if brew list --cask flameshot >/dev/null 2>&1 || [ -d "$app_path" ]; then
+        log_ok "Flameshot 已安装"
+        return 0
+    fi
+
+    # The official Homebrew cask was disabled on 2026-09-01 because the app is
+    # not notarized. Our tap pins and verifies the upstream release while
+    # keeping Homebrew's quarantine and installation lifecycle intact.
+    log_info "安装 Flameshot..."
+    if ! brew tap | grep -qx "wacodespace/z-codespace"; then
+        brew tap wacodespace/z-codespace https://github.com/wacodespace/z-codespace
+    fi
+    brew install --cask wacodespace/z-codespace/flameshot
+    log_ok "Flameshot 已安装"
+    log_warn "Flameshot 首次启动需在 macOS 隐私与安全中批准并授予屏幕录制权限"
 }
 
 install_desktop_apps_macos() {
@@ -77,6 +98,7 @@ install_desktop_apps_macos() {
     else
         log_ok "Rectangle 已安装"
     fi
+    install_flameshot_macos
     if ! ls ~/Library/Fonts/MesloLG*NerdFont* &>/dev/null; then
         log_info "安装 MesloLG Nerd Font..."
         brew install --cask font-meslo-lg-nerd-font
