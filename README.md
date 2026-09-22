@@ -56,6 +56,9 @@ bash install.sh --desktop         # mac 上 = macos-desktop, linux 上 = ubuntu-
 | `ubuntu-desktop` | ✓ | ✓ | linux | – |
 | `ubuntu-server` | ✓ | – | – | ✓ |
 
+`macos-desktop` 会安装 Flameshot 14.0.0，并将区域截图快捷键设为 `Command+1`。
+由于上游 macOS 应用未公证，首次启动时需要在“系统设置 → 隐私与安全性”中明确批准 Flameshot，并授予屏幕录制权限。
+
 ### 仅安装 Neovim (LazyVim) 环境
 
 ```bash
