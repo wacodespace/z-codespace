@@ -69,6 +69,12 @@ install_desktop_apps_macos() {
     else
         log_ok "cmux 已安装"
     fi
+    if ! brew list --cask rectangle >/dev/null 2>&1 && [ ! -d "/Applications/Rectangle.app" ]; then
+        log_info "安装 Rectangle..."
+        brew install --cask rectangle
+    else
+        log_ok "Rectangle 已安装"
+    fi
     if ! ls ~/Library/Fonts/MesloLG*NerdFont* &>/dev/null; then
         log_info "安装 MesloLG Nerd Font..."
         brew install --cask font-meslo-lg-nerd-font
