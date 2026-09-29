@@ -130,6 +130,10 @@ setup_git_global_config() {
     fi
     log_step "配置 Git 全局设置..."
 
+    # 提交身份（提交作者会写进公开历史，必须显式设置，不能依赖仓库本地配置）
+    git config --global user.name "acodespace"
+    git config --global user.email "7epimenides@gmail.com"
+
     # UTF-8 / 中文文件名输出
     git config --global core.quotepath false
     git config --global gui.encoding utf-8
