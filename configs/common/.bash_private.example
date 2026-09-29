@@ -1,0 +1,40 @@
+# ~/.bash_private.example
+# 机器特定配置模板。复制为 ~/.bash_private（已在 .gitignore，不会入库）。
+#
+# 本地代理自动生效。Clash Verge 开了系统代理后，curl / grok / node 这类
+# 命令行程序并不会读 macOS 系统代理，只认 HTTPS_PROXY 等环境变量，所以
+# 直连 auth.x.ai、x.ai 会被 reset。这里在交互式 shell 启动时自动探测。
+#
+# 不需要代理的机器留空即可，文件不存在也没关系。
+
+_ai_proxy_port() {
+    local p
+    # 优先读 macOS 系统代理设置（Clash Verge 打开系统代理后会写入）
+    if command -v scutil >/dev/null 2>&1; then
+        p=$(scutil --proxy 2>/dev/null | awk '
+            /HTTPSEnable : 1/   { https = 1 }
+            /HTTPSPort :/       { if (https) port = $3 }
+            END                 { if (port) print port }')
+        [ -n "${p:-}" ] && { printf '%s' "$p"; return 0; }
+    fi
+    # 回退：探测常见端口
+    for p in 7897 7890 1087 1080 8080; do
+        if curl -so /dev/null --connect-timeout 1 -x "http://127.0.0.1:$p" \
+                http://www.google.com 2>/dev/null; then
+            printf '%s' "$p"; return 0
+        fi
+    done
+    return 1
+}
+
+_ai_proxy_export() {
+    local p
+    p=$(_ai_proxy_port) || return 0
+    export HTTP_PROXY="http://127.0.0.1:$p"
+    export HTTPS_PROXY="http://127.0.0.1:$p"
+    export ALL_PROXY="socks5://127.0.0.1:$p"
+    export NO_PROXY="localhost,127.0.0.1,::1,.bilibili.co,.local"
+}
+
+# 只在还没设置、且是交互式 shell 时自动挂上，避免嵌套 shell 重复探测
+[ -z "${HTTPS_PROXY:-}" ] && _ai_proxy_export

@@ -175,7 +175,20 @@ _install_codex() {
 }
 
 _install_grok() {
-    _ai_fetch "https://x.ai/cli/install.sh" | bash
+    local installer
+
+    # 先整份下载再执行。`curl | bash` 在下载失败时只会把空内容喂给 bash，
+    # 退出码是 0，脚本会一路走到底并误报"已安装"，掩盖真实错误。
+    if ! installer="$(_ai_fetch "https://x.ai/cli/install.sh")" || [ -z "$installer" ]; then
+        printf '%s\n' "grok 安装脚本下载失败（网络不通）。" >&2
+        if [ -z "${HTTPS_PROXY:-}" ]; then
+            printf '%s\n' "x.ai 通常需要代理，先执行 proxy 后再试：" >&2
+            printf '%s\n' "  proxy && igk" >&2
+        fi
+        return 1
+    fi
+
+    bash -c "$installer" || return 1
     hash -r
 
     if command -v grok >/dev/null 2>&1; then
@@ -184,8 +197,17 @@ _install_grok() {
         return 0
     fi
 
-    printf '%s\n' "grok 已安装，但当前 shell 尚未在 PATH 中找到它。" >&2
-    printf '%s\n' "请重启终端，或执行: export PATH=\"\$HOME/.grok/bin:\$PATH\"" >&2
+    # 装上了但当前 shell 的 PATH 还是旧的，把 ~/.grok/bin 补进去
+    if [ -x "$HOME/.grok/bin/grok" ]; then
+        export PATH="$HOME/.grok/bin:$PATH"
+        hash -r
+        printf '%s\n' "grok 安装完成: $(command -v grok)"
+        printf '%s\n' "（已为当前 shell 补上 PATH；新终端由 .bashrc 自动生效）"
+        grok --version 2>/dev/null || true
+        return 0
+    fi
+
+    printf '%s\n' "grok 安装脚本执行完，但未找到可执行文件。" >&2
     return 1
 }
 

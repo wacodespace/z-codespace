@@ -13,6 +13,11 @@ case $- in
       *) return;;
 esac
 
+# --- 机器本地配置（不入库，可选）---
+# ~/.bash_private 放机器特定的东西，例如本地代理自动生效，见
+# configs/common/.bash_private.example。文件不存在时静默跳过。
+[ -f ~/.bash_private ] && . ~/.bash_private
+
 # --- 代理管理 ---
 # proxy  — 自动探测本地代理端口并设置环境变量
 # noproxy — 清除代理环境变量
@@ -170,10 +175,6 @@ unset _BASH_DIR
 [ -f ~/.bash_server ] && . ~/.bash_server
 [ -f ~/.bash_site ] && . ~/.bash_site
 
-# >>> grok installer >>>
-export PATH="$HOME/.grok/bin:$PATH"
-[[ -r "$HOME/.grok/completions/bash/grok.bash" ]] && source "$HOME/.grok/completions/bash/grok.bash"
-# <<< grok installer <<<
 
 # --- 防止终端 prompt hooks 泄漏到 tmux/子 Bash ---
 # cmux/Ghostty 会把 PROMPT_COMMAND 导出；子 Bash 只能继承函数名，不能继承
@@ -196,3 +197,8 @@ fi
 
 # 保留当前 shell 的 prompt integration，但不要再把它传给 tmux/子 Bash。
 export -n PROMPT_COMMAND 2>/dev/null || true
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+[[ -r "$HOME/.grok/completions/bash/grok.bash" ]] && source "$HOME/.grok/completions/bash/grok.bash"
+# <<< grok installer <<<
