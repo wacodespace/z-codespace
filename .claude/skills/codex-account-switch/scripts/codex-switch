@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+# codex-switch: switch the ChatGPT account used by Codex (CLI + desktop) on macOS
+# by swapping $CODEX_HOME/auth.json between saved profiles, with refreshed
+# tokens written back to the outgoing profile so no profile goes stale.
+#
+# Usage:
+#   codex-switch                 show current profile and live account
+#   codex-switch list            list saved profiles
+#   codex-switch save <name>     save the live login as profile <name>
+#   codex-switch use <name>      switch to profile <name>   (alias: codex-switch <name>)
+#   codex-switch rm <name>       delete profile <name>
+#   add --force to `use` to skip the running-process check
+set -euo pipefail
+umask 077
+
+CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
+AUTH="$CODEX_DIR/auth.json"
+PROFILES="${CODEX_PROFILES_DIR:-$HOME/.codex-profiles}"
+CURRENT_FILE="$PROFILES/.current"
+
+mkdir -p "$PROFILES"
+chmod 700 "$PROFILES"
+
+die() { echo "codex-switch: $*" >&2; exit 1; }
+
+valid_name() {
+  [[ "$1" =~ ^[A-Za-z0-9._-]+$ && "$1" != .* ]] || die "invalid profile name: '$1'"
+}
+
+current() { cat "$CURRENT_FILE" 2>/dev/null || true; }
+
+# Print "<account_id>\t<email>\t<plan>" for an auth.json; never prints tokens.
+describe() {
+  python3 - "$1" <<'PY' 2>/dev/null || printf '?\t?\t?\n'
+import base64, json, sys
+a = json.load(open(sys.argv[1]))
+t = a.get("tokens") or {}
+email = plan = "?"
+try:
+    p = t["id_token"].split(".")[1]
+    p += "=" * (-len(p) % 4)
+    c = json.loads(base64.urlsafe_b64decode(p))
+    email = c.get("email", "?")
+    plan = (c.get("https://api.openai.com/auth") or {}).get("chatgpt_plan_type", "?")
+except Exception:
+    pass
+print(f"{t.get('account_id') or '?'}\t{email}\t{plan}")
+PY
+}
+
+account_id() { describe "$1" | cut -f1; }
+
+check_auth_file() {
+  [ -f "$1" ] || die "not found: $1"
+  python3 -c 'import json,sys; a=json.load(open(sys.argv[1])); assert a.get("tokens",{}).get("refresh_token")' "$1" 2>/dev/null \
+    || die "$1 is not a ChatGPT-login auth.json (no refresh_token)"
+}
+
+# Atomic copy preserving 0600.
+atomic_cp() {
+  local tmp
+  tmp="$(mktemp "$(dirname "$2")/.codex-switch.XXXXXX")"
+  cp "$1" "$tmp"
+  chmod 600 "$tmp"
+  mv -f "$tmp" "$2"
+}
+
+codex_running() {
+  pgrep -x codex >/dev/null 2>&1 \
+    || pgrep -f 'Codex Framework\.framework' >/dev/null 2>&1 \
+    || pgrep -f '/Codex\.app/Contents/MacOS/' >/dev/null 2>&1
+}
+
+cmd_status() {
+  local cur; cur="$(current)"
+  echo "profile: ${cur:-(none)}"
+  if [ -f "$AUTH" ]; then
+    IFS=$'\t' read -r _ email plan < <(describe "$AUTH")
+    echo "live:    $email ($plan)"
+  else
+    echo "live:    (no $AUTH)"
+  fi
+}
+
+cmd_list() {
+  local cur f name email plan
+  cur="$(current)"
+  shopt -s nullglob
+  for f in "$PROFILES"/*.json; do
+    name="$(basename "$f" .json)"
+    IFS=$'\t' read -r _ email plan < <(describe "$f")
+    printf '%s %-16s %s (%s)\n' "$([ "$name" = "$cur" ] && echo '*' || echo ' ')" "$name" "$email" "$plan"
+  done
+}
+
+cmd_save() {
+  local name="${1:-}"; [ -n "$name" ] || die "usage: codex-switch save <name>"
+  valid_name "$name"
+  check_auth_file "$AUTH"
+  atomic_cp "$AUTH" "$PROFILES/$name.json"
+  echo "$name" > "$CURRENT_FILE"
+  IFS=$'\t' read -r _ email plan < <(describe "$AUTH")
+  echo "saved '$name': $email ($plan)"
+}
+
+cmd_use() {
+  local force=0 name=""
+  for arg in "$@"; do
+    case "$arg" in --force) force=1 ;; *) name="$arg" ;; esac
+  done
+  [ -n "$name" ] || die "usage: codex-switch use <name> [--force]"
+  valid_name "$name"
+  local target="$PROFILES/$name.json"
+  check_auth_file "$target"
+
+  local cur; cur="$(current)"
+  if [ "$cur" = "$name" ]; then echo "already on '$name'"; return; fi
+
+  if [ "$force" -eq 0 ] && codex_running; then
+    die "Codex is running (CLI or desktop app). Quit it first, or pass --force."
+  fi
+
+  # Write refreshed tokens back to the outgoing profile -- but only if the live
+  # login really is that profile's account (the user may have run `codex login`
+  # by hand in between). Otherwise stash it instead of corrupting a profile.
+  if [ -f "$AUTH" ]; then
+    if [ -n "$cur" ] && [ -f "$PROFILES/$cur.json" ] \
+       && [ "$(account_id "$AUTH")" = "$(account_id "$PROFILES/$cur.json")" ]; then
+      atomic_cp "$AUTH" "$PROFILES/$cur.json"
+    else
+      local stash="$PROFILES/.unsaved-$(date +%Y%m%d-%H%M%S).json.bak"
+      cp "$AUTH" "$stash"
+      echo "note: live login didn't match profile '${cur:-none}'; stashed it at $stash" >&2
+    fi
+  fi
+
+  atomic_cp "$target" "$AUTH"
+  echo "$name" > "$CURRENT_FILE"
+  IFS=$'\t' read -r _ email plan < <(describe "$AUTH")
+  echo "switched to '$name': $email ($plan)"
+}
+
+cmd_rm() {
+  local name="${1:-}"; [ -n "$name" ] || die "usage: codex-switch rm <name>"
+  valid_name "$name"
+  [ -f "$PROFILES/$name.json" ] || die "no profile '$name'"
+  rm -f "$PROFILES/$name.json"
+  [ "$(current)" = "$name" ] && rm -f "$CURRENT_FILE"
+  echo "removed '$name'"
+}
+
+case "${1:-}" in
+  ""|status) cmd_status ;;
+  list|ls)   cmd_list ;;
+  save)      shift; cmd_save "$@" ;;
+  use)       shift; cmd_use "$@" ;;
+  rm)        shift; cmd_rm "$@" ;;
+  -h|--help|help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)         cmd_use "$@" ;;
+esac
