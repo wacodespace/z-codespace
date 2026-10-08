@@ -29,13 +29,27 @@ chmod +x ~/.local/bin/codex-switch
 
 Make sure `~/.local/bin` is on `PATH`.
 
-One-time setup, run by the user. Each account logs in once:
+One-time setup, run by the user. Each account logs in once in the browser:
 
 ```bash
-codex-switch save plus                      # save the account that's logged in now
-codex logout && codex login                 # browser login with the other account
-codex-switch save pro
+codex-switch login plus    # removes the local auth.json, runs `codex login`, saves it as "plus"
+codex-switch login pro     # same for the other account
 ```
+
+If an account is already logged in, `codex-switch save plus` keeps that login instead of
+doing it again.
+
+**Never run `codex logout` to change accounts.** It doesn't just delete the local file: it
+also revokes the tokens on OpenAI's side, which kills the saved copy of that profile.
+`codex-switch login` only deletes the local file. To do it by hand:
+`rm ~/.codex/auth.json && codex login`.
+
+### New device
+
+Run `codex-switch login <name>` once for each account on every device. **Don't copy
+profile files from another machine.** Both machines would then share one refresh token,
+and since tokens rotate, whichever machine refreshes first makes the other one's copy
+invalid. Each device that logs in on its own gets an independent set of tokens.
 
 Daily use:
 
@@ -52,6 +66,8 @@ What the script guarantees:
 - Before switching, it writes refreshed tokens back to the outgoing profile, but only if
   the live login's `account_id` matches that profile. If the user ran `codex login` by hand in
   between, the live file is stashed as `~/.codex-profiles/.unsaved-*.json.bak` and no profile gets overwritten.
+- `login` writes back the current login first, the same way. If the browser login fails or is
+  cancelled, it restores the previous profile, so the user is never left logged out.
 - It does atomic writes with mode 0600. Profiles live in `~/.codex-profiles/` (mode 700),
   or in `$CODEX_PROFILES_DIR` if set. It respects `$CODEX_HOME`.
 - It never prints tokens. Status shows only email and plan, decoded from `id_token`.
@@ -68,9 +84,11 @@ What the script guarantees:
 
 - Never `cat`, echo, log, or commit `auth.json` or profile files. To check which account is
   active, decode only the `email` and `chatgpt_plan_type` claims, or run `codex-switch status`.
-- The browser login (`codex login`) is the user's job. Don't automate it.
+- The browser login is the user's job. Hand them `codex-switch login <name>` to run; don't
+  automate the login itself.
+- Never suggest `codex logout` as a step in switching accounts (see above).
 - Before switching, ask the user to quit Codex. Don't kill their processes without asking.
-- If a switch lands on a login prompt, that profile's refresh token is dead. Fix it with:
-  `codex login` with that account, then `codex-switch save <name>`.
+- If a switch lands on a login prompt, that profile's refresh token is dead. Fix it with
+  `codex-switch login <name>`, which overwrites the dead profile.
 - Don't use this to share one subscription between several people. That breaks OpenAI's
   terms. It is meant for one person switching between their own accounts.

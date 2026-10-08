@@ -6,10 +6,14 @@
 # Usage:
 #   codex-switch                 show current profile and live account
 #   codex-switch list            list saved profiles
+#   codex-switch login <name>    browser-login a (new) account and save it as <name>
 #   codex-switch save <name>     save the live login as profile <name>
 #   codex-switch use <name>      switch to profile <name>   (alias: codex-switch <name>)
 #   codex-switch rm <name>       delete profile <name>
-#   add --force to `use` to skip the running-process check
+#   add --force to `use`/`login` to skip the running-process check
+#
+# Never use `codex logout` to change accounts: it revokes the tokens server-side,
+# which kills the saved copy of that profile too. `login` only removes the local file.
 set -euo pipefail
 umask 077
 
@@ -71,6 +75,28 @@ codex_running() {
     || pgrep -f '/Codex\.app/Contents/MacOS/' >/dev/null 2>&1
 }
 
+require_codex_stopped() {
+  if [ "$1" -eq 0 ] && codex_running; then
+    die "Codex is running (CLI or desktop app). Quit it first, or pass --force."
+  fi
+}
+
+# Write refreshed tokens back to the current profile -- but only if the live
+# login really is that profile's account (the user may have run `codex login`
+# by hand in between). Otherwise stash it instead of corrupting a profile.
+write_back_live() {
+  [ -f "$AUTH" ] || return 0
+  local cur; cur="$(current)"
+  if [ -n "$cur" ] && [ -f "$PROFILES/$cur.json" ] \
+     && [ "$(account_id "$AUTH")" = "$(account_id "$PROFILES/$cur.json")" ]; then
+    atomic_cp "$AUTH" "$PROFILES/$cur.json"
+  else
+    local stash="$PROFILES/.unsaved-$(date +%Y%m%d-%H%M%S).json.bak"
+    cp "$AUTH" "$stash"
+    echo "note: live login didn't match profile '${cur:-none}'; stashed it at $stash" >&2
+  fi
+}
+
 cmd_status() {
   local cur; cur="$(current)"
   echo "profile: ${cur:-(none)}"
@@ -116,28 +142,50 @@ cmd_use() {
   local cur; cur="$(current)"
   if [ "$cur" = "$name" ]; then echo "already on '$name'"; return; fi
 
-  if [ "$force" -eq 0 ] && codex_running; then
-    die "Codex is running (CLI or desktop app). Quit it first, or pass --force."
-  fi
-
-  # Write refreshed tokens back to the outgoing profile -- but only if the live
-  # login really is that profile's account (the user may have run `codex login`
-  # by hand in between). Otherwise stash it instead of corrupting a profile.
-  if [ -f "$AUTH" ]; then
-    if [ -n "$cur" ] && [ -f "$PROFILES/$cur.json" ] \
-       && [ "$(account_id "$AUTH")" = "$(account_id "$PROFILES/$cur.json")" ]; then
-      atomic_cp "$AUTH" "$PROFILES/$cur.json"
-    else
-      local stash="$PROFILES/.unsaved-$(date +%Y%m%d-%H%M%S).json.bak"
-      cp "$AUTH" "$stash"
-      echo "note: live login didn't match profile '${cur:-none}'; stashed it at $stash" >&2
-    fi
-  fi
+  require_codex_stopped "$force"
+  write_back_live
 
   atomic_cp "$target" "$AUTH"
   echo "$name" > "$CURRENT_FILE"
   IFS=$'\t' read -r _ email plan < <(describe "$AUTH")
   echo "switched to '$name': $email ($plan)"
+}
+
+cmd_login() {
+  local force=0 name=""
+  for arg in "$@"; do
+    case "$arg" in --force) force=1 ;; *) name="$arg" ;; esac
+  done
+  [ -n "$name" ] || die "usage: codex-switch login <name> [--force]"
+  valid_name "$name"
+  command -v "${CODEX_BIN:-codex}" >/dev/null || die "codex not found on PATH"
+
+  require_codex_stopped "$force"
+  write_back_live
+  local prev; prev="$(current)"
+
+  # Remove only the local file -- NOT `codex logout`, which revokes the tokens
+  # server-side and would kill the copy we just saved.
+  rm -f "$AUTH"
+  echo "Log in with the account for '$name' in the browser..."
+  if ! "${CODEX_BIN:-codex}" login || ! check_auth_file "$AUTH" 2>/dev/null; then
+    if [ -n "$prev" ] && [ -f "$PROFILES/$prev.json" ]; then
+      atomic_cp "$PROFILES/$prev.json" "$AUTH"
+      die "login failed or was cancelled; restored '$prev'"
+    fi
+    die "login failed or was cancelled"
+  fi
+
+  local new_id f
+  new_id="$(account_id "$AUTH")"
+  for f in "$PROFILES"/*.json; do
+    [ -e "$f" ] || continue
+    [ "$(basename "$f" .json)" = "$name" ] && continue
+    if [ "$(account_id "$f")" = "$new_id" ]; then
+      echo "warning: this account is already saved as '$(basename "$f" .json)'" >&2
+    fi
+  done
+  cmd_save "$name"
 }
 
 cmd_rm() {
@@ -152,9 +200,10 @@ cmd_rm() {
 case "${1:-}" in
   ""|status) cmd_status ;;
   list|ls)   cmd_list ;;
+  login)     shift; cmd_login "$@" ;;
   save)      shift; cmd_save "$@" ;;
   use)       shift; cmd_use "$@" ;;
   rm)        shift; cmd_rm "$@" ;;
-  -h|--help|help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
+  -h|--help|help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' ;;
   *)         cmd_use "$@" ;;
 esac
