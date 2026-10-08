@@ -15,6 +15,7 @@
 #   bash install.sh --all                      # profile + nvim + ai-switch
 #   bash install.sh --nvim-only                # 仅 Neovim 环境
 #   bash install.sh --ai-switch                # 仅 AI 中转切换器
+#   bash install.sh --skills                   # 仅链接共享 Agent Skills（skills/）
 #   bash install.sh --force                    # 强制覆盖
 #
 # Claude Code 状态栏 (HUD) 现在改用官方 plugin marketplace 安装，
@@ -36,6 +37,7 @@ INSTALL_NVIM=false
 NVIM_ONLY=false
 INSTALL_AI_SWITCH=false
 AI_SWITCH_ONLY=false
+SKILLS_ONLY=false
 
 # --- 自动检测 profile ---
 detect_profile() {
@@ -64,6 +66,7 @@ while [[ $# -gt 0 ]]; do
         --all)            INSTALL_NVIM=true; INSTALL_AI_SWITCH=true; shift ;;
         --nvim-only)      NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
         --ai-switch)      AI_SWITCH_ONLY=true; INSTALL_AI_SWITCH=true; shift ;;
+        --skills)         SKILLS_ONLY=true; shift ;;
         --force)          FORCE="true"; shift ;;
         -h|--help)
             cat <<'EOF'
@@ -80,6 +83,7 @@ Profile（决定装哪些 layer）:
   --all                     基础配置 + Neovim + AI 中转切换器
   --nvim-only               仅 Neovim 环境
   --ai-switch               仅 AI 中转切换器 (macOS: CC Switch / Linux: cc-switch-cli)
+  --skills                  仅链接共享 Agent Skills 到 Claude / Codex / Grok（基础配置也会做）
 
 其它:
   --force                   强制覆盖，不备份
@@ -152,6 +156,11 @@ setup_git_global_config() {
 }
 
 main() {
+    if [ "$SKILLS_ONLY" = "true" ]; then
+        apply_agent_skills "$FORCE"
+        return
+    fi
+
     # nvim-only / ai-switch-only 时不需要 profile
     if [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; then
         if [ -z "$PROFILE" ]; then

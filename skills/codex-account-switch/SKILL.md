@@ -17,17 +17,16 @@ refresh token in a saved copy can stop working. A plain snapshot goes stale, and
 the browser login comes back. The bundled script fixes this by writing the live (refreshed)
 `auth.json` back to the outgoing profile before every switch.
 
-## Recommended approach: `scripts/codex-switch`
+## Recommended approach: `bin/codex-switch`
 
-Install it:
+The z-codespace `install.sh` symlinks `bin/codex-switch` into `~/.local/bin`, which its
+`.bashrc` puts on `PATH`. Because it's a symlink, edits to the repo copy take effect
+immediately. To install by hand:
 
 ```bash
 mkdir -p ~/.local/bin
-cp scripts/codex-switch ~/.local/bin/codex-switch
-chmod +x ~/.local/bin/codex-switch
+ln -sf "$PWD/bin/codex-switch" ~/.local/bin/codex-switch
 ```
-
-Make sure `~/.local/bin` is on `PATH`.
 
 One-time setup, run by the user. Each account logs in once in the browser:
 

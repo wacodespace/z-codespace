@@ -23,4 +23,28 @@ apply_common() {
         chmod 700 "$HOME/.ssh"
         safe_link "$site_ssh" "$HOME/.ssh/config.site" "$force"
     fi
+
+    apply_agent_skills "$force"
+}
+
+# 共享 Agent Skills：仓库 skills/ 是唯一真身，按目录软链到各 agent 的用户级 skill 目录。
+#   ~/.agents/skills  Codex、Grok 读
+#   ~/.claude/skills  Claude Code 读
+# 只链单个 skill 目录、不链整个父目录，其他工具（如 understand-anything）放在同一目录下的 skill 不受影响。
+# skills/<name>/bin/* 是 skill 自带的命令行工具，链到 ~/.local/bin。
+apply_agent_skills() {
+    local force="${1:-false}"
+    local skill name tool
+    log_step "应用共享 Agent Skills（Claude / Codex / Grok）..."
+    for skill in "$PROJECT_ROOT"/skills/*/; do
+        [ -f "$skill/SKILL.md" ] || continue
+        skill="${skill%/}"
+        name="$(basename "$skill")"
+        safe_link "$skill" "$HOME/.agents/skills/$name" "$force"
+        safe_link "$skill" "$HOME/.claude/skills/$name" "$force"
+        for tool in "$skill"/bin/*; do
+            [ -f "$tool" ] && [ -x "$tool" ] || continue
+            safe_link "$tool" "$HOME/.local/bin/$(basename "$tool")" "$force"
+        done
+    done
 }

@@ -163,6 +163,9 @@ z-codespace/
 │   ├── doctor.sh                #   环境健康检查
 │   ├── offline-pack.sh          #   创建离线包
 │   └── offline-deploy.sh        #   离线部署
+├── skills/                      # 共享 Agent Skills（Claude / Codex / Grok 共用一份）
+│   └── codex-account-switch/    #   Codex 多账号切换（SKILL.md + bin/codex-switch）
+├── AGENTS.md                    # 所有 agent 的仓库说明（CLAUDE.md 通过 @AGENTS.md 引用）
 ├── docs/
 │   ├── DESIGN.md                # 设计文档（依赖 / LSP / 离线迁移）
 │   └── superpowers/specs/       # 重构设计 spec
@@ -243,6 +246,23 @@ macOS / Linux 基础安装都会执行 `scripts/setup-ssh.sh`：
 - 不存在时自动生成 `~/.ssh/id_ed25519`
 - 尝试把 `github.com` 加入 `~/.ssh/known_hosts`
 - 输出公钥，方便添加到 GitHub 的 SSH keys
+
+### 共享 Agent Skills
+
+`skills/<name>/SKILL.md` 是唯一真身，基础安装时会按目录软链到：
+
+| 路径 | 读取方 |
+|---|---|
+| `~/.agents/skills/<name>` | Codex、Grok |
+| `~/.claude/skills/<name>` | Claude Code |
+
+`skills/<name>/bin/*` 会链到 `~/.local/bin`。任何 agent 改了 skill，改的都是仓库里这一份，`git diff` 即可看到。
+
+```bash
+bash install.sh --skills   # 只重新链接 skills（新增 skill 后执行）
+```
+
+各 agent 的维护规则见 [AGENTS.md](AGENTS.md)。
 
 ### 私有配置
 
