@@ -26,6 +26,9 @@ apply_desktop_macos() {
               "$HOME/Library/Application Support/com.cmuxterm.app/config.ghostty" "$force"
     safe_link "$PROJECT_ROOT/configs/desktop/macos/.config/flameshot/flameshot.ini" \
               "$HOME/.config/flameshot/flameshot.ini" "$force"
+    # codex-switch：切换 Codex 的 ChatGPT 账号（见 .claude/skills/codex-account-switch）
+    safe_link "$PROJECT_ROOT/.claude/skills/codex-account-switch/scripts/codex-switch" \
+              "$HOME/.local/bin/codex-switch" "$force"
 }
 
 apply_desktop_linux() {

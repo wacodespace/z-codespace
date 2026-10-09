@@ -19,12 +19,13 @@ the browser login comes back. The bundled script fixes this by writing the live 
 
 ## Recommended approach: `scripts/codex-switch`
 
-Install it:
+Install it. On macOS the repo's `install.sh` already symlinks it into `~/.local/bin`. To do it by hand
+(run from the skill directory), symlink it so edits to the script take effect right away:
 
 ```bash
 mkdir -p ~/.local/bin
-cp scripts/codex-switch ~/.local/bin/codex-switch
-chmod +x ~/.local/bin/codex-switch
+ln -sf "$PWD/scripts/codex-switch" ~/.local/bin/codex-switch
+chmod +x scripts/codex-switch
 ```
 
 Make sure `~/.local/bin` is on `PATH`.
