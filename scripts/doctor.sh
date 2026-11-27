@@ -37,6 +37,7 @@ check_cmd() {
             claude)  ver=$($cmd --version 2>/dev/null | head -n1) ;;
             codex)   ver=$($cmd --version 2>/dev/null | head -n1) ;;
             grok)    ver=$($cmd --version 2>/dev/null | head -n1) ;;
+            agy)     ver=$($cmd --version 2>/dev/null | head -n1) ;;
             *)       ver="found" ;;
         esac
         log_ok "$cmd: $ver"
@@ -137,6 +138,32 @@ check_ssh_key() {
     WARNINGS=$((WARNINGS + 1))
 }
 
+# --- 检查 Antigravity App（可选；macOS 是 .app，Linux 是我们写的启动器） ---
+check_antigravity_app() {
+    case "$OS" in
+        macos)
+            if [ -d "/Applications/Antigravity.app" ]; then
+                log_ok "Antigravity App: /Applications/Antigravity.app"
+            else
+                log_warn "缺少可选应用: Antigravity App (iag 或 brew install --cask antigravity)"
+                WARNINGS=$((WARNINGS + 1))
+            fi
+            ;;
+        linux)
+            if [ -x "$HOME/.local/bin/antigravity" ] || [ -x "$HOME/.local/opt/antigravity/Antigravity.AppImage" ]; then
+                log_ok "Antigravity App: $HOME/.local/bin/antigravity"
+            else
+                log_warn "缺少可选应用: Antigravity App (iag)"
+                WARNINGS=$((WARNINGS + 1))
+            fi
+            ;;
+        *)
+            log_warn "未检查 Antigravity App（未知系统: $OS）"
+            WARNINGS=$((WARNINGS + 1))
+            ;;
+    esac
+}
+
 # --- 检查 mason 工具 ---
 check_mason() {
     local mason_dir="$HOME/.local/share/nvim/mason/bin"
@@ -190,6 +217,8 @@ main() {
     check_cmd claude  false "Claude Code CLI (终端 cc；与 <Space>xs 剪贴板配合)"
     check_cmd codex   false "Codex CLI (终端 cx；与 <Space>xs 剪贴板配合)"
     check_cmd grok    false "Grok CLI (终端 gk；与 <Space>xs 剪贴板配合)"
+    check_cmd agy     false "Antigravity CLI (终端 agy；安装: iagy)"
+    check_antigravity_app
     check_cmd cc-switch false "AI 中转切换器 (headless: cc-switch-cli；macOS GUI 版无同名 CLI)"
     echo ""
 

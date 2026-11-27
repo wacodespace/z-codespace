@@ -12,10 +12,11 @@
 #   bash install.sh --profile=ubuntu-server    # 显式指定 profile
 #   bash install.sh --server                   # 语法糖 = --profile=ubuntu-server
 #   bash install.sh --desktop                  # mac → macos-desktop, linux → ubuntu-desktop
-#   bash install.sh --all                      # profile + nvim + ai-switch
+#   bash install.sh --all                      # profile + nvim + ai-switch + antigravity
 #   bash install.sh --nvim-only                # 仅 Neovim 环境
 #   bash install.sh --ai-switch                # 仅 AI 中转切换器
 #   bash install.sh --skills                   # 仅链接共享 Agent Skills（skills/）
+#   bash install.sh --antigravity              # 仅 Antigravity App + CLI
 #   bash install.sh --force                    # 强制覆盖
 #
 # Claude Code 状态栏 (HUD) 现在改用官方 plugin marketplace 安装，
@@ -38,6 +39,8 @@ NVIM_ONLY=false
 INSTALL_AI_SWITCH=false
 AI_SWITCH_ONLY=false
 SKILLS_ONLY=false
+INSTALL_ANTIGRAVITY=false
+ANTIGRAVITY_ONLY=false
 
 # --- 自动检测 profile ---
 detect_profile() {
@@ -63,10 +66,11 @@ while [[ $# -gt 0 ]]; do
                 PROFILE="ubuntu-desktop"
             fi
             shift ;;
-        --all)            INSTALL_NVIM=true; INSTALL_AI_SWITCH=true; shift ;;
+        --all)            INSTALL_NVIM=true; INSTALL_AI_SWITCH=true; INSTALL_ANTIGRAVITY=true; shift ;;
         --nvim-only)      NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
         --ai-switch)      AI_SWITCH_ONLY=true; INSTALL_AI_SWITCH=true; shift ;;
         --skills)         SKILLS_ONLY=true; shift ;;
+        --antigravity)    ANTIGRAVITY_ONLY=true; INSTALL_ANTIGRAVITY=true; shift ;;
         --force)          FORCE="true"; shift ;;
         -h|--help)
             cat <<'EOF'
@@ -80,10 +84,11 @@ Profile（决定装哪些 layer）:
   （不指定时自动检测：macOS → macos-desktop, Linux+SSH → ubuntu-server, else → ubuntu-desktop）
 
 可选组件:
-  --all                     基础配置 + Neovim + AI 中转切换器
+  --all                     基础配置 + Neovim + AI 中转切换器 + Antigravity
   --nvim-only               仅 Neovim 环境
   --ai-switch               仅 AI 中转切换器 (macOS: CC Switch / Linux: cc-switch-cli)
   --skills                  仅链接共享 Agent Skills 到 Claude / Codex / Grok（基础配置也会做）
+  --antigravity             仅 Antigravity App + CLI（ubuntu-server 只装 CLI）
 
 其它:
   --force                   强制覆盖，不备份
@@ -126,6 +131,29 @@ apply_profile() {
     esac
 }
 
+# desktop：App + CLI。ubuntu-server：只装 CLI（没有桌面环境）。
+# 失败不中断其余安装；网络恢复后可再跑 iag / iagy。
+install_antigravity() {
+    local mode="all"
+    case "$PROFILE" in
+        ubuntu-server) mode="cli" ;;
+    esac
+
+    if [ "$mode" = "all" ] && [ "$(uname -s)" = "Darwin" ]; then
+        install_homebrew
+    fi
+
+    echo ""
+    log_step "安装 Antigravity（${mode}）..."
+    if [ "$mode" = "cli" ]; then
+        log_info "ubuntu-server 不安装桌面 App。需要 App 时在桌面执行 iag。"
+    fi
+    if ! bash "$SCRIPT_DIR/scripts/install-antigravity.sh" "$mode"; then
+        log_warn "Antigravity 安装未完成。可稍后执行 iagy（CLI）或 iag（App）"
+        log_warn "或: bash install.sh --antigravity"
+    fi
+}
+
 # --- 一次性 Git 全局配置（取代 .bashrc 启动时反复写 ~/.gitconfig）---
 setup_git_global_config() {
     if ! has_cmd git; then
@@ -161,9 +189,10 @@ main() {
         return
     fi
 
-    # nvim-only / ai-switch-only 时不需要 profile
-    if [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; then
-        if [ -z "$PROFILE" ]; then
+    # nvim-only / ai-switch-only 时不需要 profile。装 Antigravity 时仍要，
+    # 用来决定 server 只装 CLI 还是 desktop 连 App 一起装。
+    if [ -z "$PROFILE" ]; then
+        if [ "$INSTALL_ANTIGRAVITY" = "true" ] || { [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; }; then
             PROFILE="$(detect_profile)"
             log_info "自动检测 profile: $PROFILE"
         fi
@@ -177,7 +206,7 @@ main() {
     echo ""
 
     # --- 基础配置（按 profile dispatch） ---
-    if [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; then
+    if [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ]; then
         apply_profile
         setup_git_global_config
 
@@ -188,8 +217,13 @@ main() {
         echo ""
     fi
 
+    # --- Antigravity App + CLI（--all / --antigravity；不进默认交互安装） ---
+    if [ "$INSTALL_ANTIGRAVITY" = "true" ]; then
+        install_antigravity
+    fi
+
     # --- Neovim 环境 ---
-    if [ "$AI_SWITCH_ONLY" != "true" ]; then
+    if [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ]; then
         if [ "$INSTALL_NVIM" = "true" ]; then
             log_step "安装 Neovim (LazyVim) 环境..."
             echo ""

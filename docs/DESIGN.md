@@ -70,6 +70,7 @@ z-codespace/
 │   ├── profile-server.sh        # apply_server
 │   ├── profile-packages.sh      # Linux 包管理器基础工具
 │   ├── setup-ssh.sh
+│   ├── install-antigravity.sh   # Antigravity App + CLI (agy)
 │   ├── install-deps.sh          # Neovim 及运行依赖
 │   ├── install-nvim.sh          # 部署 LazyVim
 │   ├── uninstall-nvim.sh

@@ -20,13 +20,31 @@
 
 ## 快速开始
 
-### 完整安装（基础配置 + Neovim + AI 中转切换器）
+### 完整安装（基础配置 + Neovim + AI 中转切换器 + Antigravity）
 
 ```bash
 git clone https://github.com/wacodespace/z-codespace.git
 cd z-codespace
 bash install.sh --all
 ```
+
+### 安装 Antigravity App 和 Antigravity CLI
+
+```bash
+bash install.sh --antigravity
+# desktop profile → App + CLI（命令 agy）
+# ubuntu-server   → 只装 CLI
+
+# 配置生效后，也可以单独装 / 卸：
+iag    # 安装 Antigravity App
+uag    # 卸载 App（保留登录数据）
+iagy   # 安装 Antigravity CLI → ~/.local/bin/agy
+uagy   # 卸载 CLI（保留 ~/.gemini/antigravity-cli）
+```
+
+macOS App 用 `brew install --cask antigravity`。Linux App 下载官方最新 AppImage 到 `~/.local/opt/antigravity/`，启动器是 `~/.local/bin/antigravity`。CLI 用官方安装脚本，但会跳过它对 `~/.bashrc` 的 PATH 改写：这个文件是本仓库的软链接，`~/.local/bin` 已经在 PATH 里。
+
+`bash install.sh` 和 `bash install.sh --all` 里，只有 `--all` 会顺带装 Antigravity。只要这一项时用 `--antigravity`。
 
 ### 仅安装 AI 中转切换器
 
@@ -156,6 +174,7 @@ z-codespace/
 │   ├── profile-server.sh        #   server layer apply
 │   ├── profile-packages.sh      #   Linux 包管理器安装基础工具
 │   ├── setup-ssh.sh             #   自动检查 / 生成 SSH key
+│   ├── install-antigravity.sh   #   Antigravity App + CLI (agy)
 │   ├── install-deps.sh          #   安装 Neovim 及依赖
 │   ├── install-nvim.sh          #   部署 LazyVim 配置
 │   ├── uninstall-nvim.sh        #   卸载 nvim 配置
@@ -231,7 +250,7 @@ bash scripts/doctor.sh
 - 跨平台别名（macOS/Linux）
 - Git 快捷键 (输入 `gg` 查看)
 - GPU 监控别名 (NVIDIA: `nv` / AMD: `rc`)
-- AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex, `igk`/`ugk` 安装/卸载 Grok)
+- AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex, `igk`/`ugk` 安装/卸载 Grok, `iagy`/`uagy` 安装/卸载 Antigravity CLI, `iag`/`uag` 安装/卸载 Antigravity App)
 - Codex 启动别名：`cx` / `cxf` / `cxy`
 - Claude 启动别名：`cc` / `ccf` / `ccy`
 - Grok 启动别名：`gk`
