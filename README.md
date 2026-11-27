@@ -1,361 +1,80 @@
-# z-codespace — 开发环境配置管理
+# z-codespace — 个人开发环境配置与冷启动仓库
 
-可重复、可审计、可自动化部署的开发环境方案。支持 macOS 和 Linux 裸环境一键安装。
+个人 dotfiles、共享 Agent Skills 与新机器冷启动入口。支持 macOS Desktop、Linux Desktop 与 Linux / GPU Server。
 
-## 项目目标
+## 冷启动三层模型
 
-- **生产可用**：稳定优先，适合 AI infra / CUDA / Python / C++ 日常开发
-- **可重复部署**：脚本幂等，配置版本锁定，支持离线迁移
-- **最小依赖**：不依赖 Docker / Nix / Ansible / Home Manager
-- **跨平台**：macOS 本地 + Linux 服务器 + SSH 远程 + GPU 机器
-
-## 支持平台
-
-| 平台 | 状态 |
-|------|------|
-| macOS (Apple Silicon / Intel) | 完整支持 |
-| Ubuntu / Debian | 完整支持 |
-| RHEL / CentOS / Rocky | 完整支持 |
-| Arch Linux | 基本支持 |
+1. **脚本层（[install.sh](install.sh)）**：只做四件确定性的事——软链 `configs/`、按目录软链 `skills/`、写 Git 全局配置、SSH bootstrap（含 `ssh.github.com:443` host key）。不调用包管理器，不下载软件。
+2. **Shell 层（[configs/common/bash/ai-cli.sh](configs/common/bash/ai-cli.sh)）**：提供 `icc` / `icx` / `igk`（Claude Code / Codex / Grok）联网安装入口，用来在新机器上拉起第一个 Agent。
+3. **清单层（[BOOTSTRAP.md](BOOTSTRAP.md)）**：记录其余软件的期望结果与已知约束（Neovim、Antigravity、Orca、Flameshot、中转切换器等），交由第一个 Agent 现场安装。
 
 ## 快速开始
-
-### 完整安装（基础配置 + Neovim + AI 中转切换器 + Antigravity + Orca）
 
 ```bash
 git clone https://github.com/wacodespace/z-codespace.git
 cd z-codespace
-bash install.sh --all
+bash install.sh                              # 自动检测 profile；GPU 容器显式加 --profile=ubuntu-server
+source ~/.bashrc && proxy && icc             # 或 icx / igk 拉起第一个 Agent，之后按 BOOTSTRAP.md 装其余软件
 ```
 
-### 安装 Antigravity App 和 Antigravity CLI
+常用参数：
 
 ```bash
-bash install.sh --antigravity
-# desktop profile → App + CLI（命令 agy）
-# ubuntu-server   → 只装 CLI
-
-# 配置生效后，也可以单独装 / 卸：
-iag    # 安装 Antigravity App
-uag    # 卸载 App（保留登录数据）
-iagy   # 安装 Antigravity CLI → ~/.local/bin/agy
-uagy   # 卸载 CLI（保留 ~/.gemini/antigravity-cli）
+bash install.sh --profile=macos-desktop      # macOS 桌面
+bash install.sh --profile=ubuntu-desktop     # Linux 桌面
+bash install.sh --profile=ubuntu-server      # Linux 服务器 / GPU 容器
+bash install.sh --skills                     # 仅软链共享 Agent Skills（不改 Git / SSH）
+bash install.sh --force                      # 强制覆盖，不备份
 ```
 
-macOS App 用 `brew install --cask antigravity`。Linux App 下载官方最新 AppImage 到 `~/.local/opt/antigravity/`，启动器是 `~/.local/bin/antigravity`。CLI 用官方安装脚本，但会跳过它对 `~/.bashrc` 的 PATH 改写：这个文件是本仓库的软链接，`~/.local/bin` 已经在 PATH 里。
+> 没有 `SSH_CLIENT` / `SSH_TTY` 的 Linux shell 会被自动识别为 `ubuntu-desktop`，GPU 容器里请显式传入 `--profile=ubuntu-server`。
 
-`bash install.sh` 和 `bash install.sh --all` 里，只有 `--all` 会顺带装 Antigravity。只要这一项时用 `--antigravity`。
+### Profile 与软链映射
 
-### 安装 Orca
-
-```bash
-bash install.sh --orca
-# desktop profile → Orca 应用；macOS 命令 orca，Linux 命令 orca-ide
-# ubuntu-server   → 跳过（没有桌面环境）
-
-iorca    # 安装
-uorca    # 卸载（保留 ~/.orca）
-```
-
-macOS 用 `brew install --cask stablyai/orca/orca`。不要写成裸 cask 名 `orca`，那是 Plotly 的另一个软件。Linux 下载官方最新 AppImage 到 `~/.local/opt/orca/`，启动器是 `~/.local/bin/orca-ide`，避免占用 GNOME 屏幕阅读器的 `/usr/bin/orca`。
-
-`bash install.sh --all` 会顺带装 Orca。只要这一项时用 `--orca`。
-
-### 仅安装 AI 中转切换器
-
-```bash
-bash install.sh --ai-switch
-# macOS → CC Switch 桌面 App (brew cask)
-# Linux → cc-switch-cli (~/.local/bin/cc-switch)
-```
-
-### 仅安装基础配置（bashrc / vimrc / tmux）
-
-```bash
-# 自动检测 profile：macOS → macos-desktop, Linux+SSH → ubuntu-server, 其他 → ubuntu-desktop
-bash install.sh
-
-# 显式指定 profile
-bash install.sh --profile=ubuntu-server
-bash install.sh --server          # 语法糖 = --profile=ubuntu-server
-bash install.sh --desktop         # mac 上 = macos-desktop, linux 上 = ubuntu-desktop
-```
-
-支持的 profile（决定装哪些 layer）：
-
-| Profile | common | desktop/shared | desktop/{os} | server |
-|---------|:---:|:---:|:---:|:---:|
-| `macos-desktop` | ✓ | ✓ | macos | – |
-| `ubuntu-desktop` | ✓ | ✓ | linux | – |
-| `ubuntu-server` | ✓ | – | – | ✓ |
-
-`macos-desktop` 会安装 Flameshot 14.0.0，并将区域截图快捷键设为 `Command+1`。
-由于上游 macOS 应用未公证，首次启动时需要在“系统设置 → 隐私与安全性”中明确批准 Flameshot，并授予屏幕录制权限。
-
-### 仅安装 Neovim (LazyVim) 环境
-
-```bash
-bash scripts/install-deps.sh    # 安装依赖
-bash scripts/install-nvim.sh    # 部署配置（会先 headless 自检，再 Lazy sync 拉插件，无需打开 nvim）
-```
-
-### 强制覆盖（不备份）
-
-```bash
-bash install.sh --all --force
-```
-
-## 升级
-
-### 升级插件（按 lazy-lock.json 同步）
-
-```bash
-bash scripts/update-nvim.sh
-```
-
-### 升级插件到最新版本
-
-```bash
-bash scripts/update-nvim.sh --upgrade
-# 验证后提交 lazy-lock.json
-git add configs/nvim/lazy-lock.json
-git commit -m "chore: update lazy-lock.json"
-```
-
-### 回滚插件
-
-```bash
-git checkout configs/nvim/lazy-lock.json
-bash scripts/update-nvim.sh
-```
-
-## 卸载
-
-```bash
-# 仅移除配置链接
-bash scripts/uninstall-nvim.sh
-
-# 同时清理插件和缓存
-bash scripts/uninstall-nvim.sh --all
-```
-
-## 离线部署
-
-适用于无外网的 Linux 服务器 / GPU 机器：
-
-```bash
-# 1. 在有网机器上准备离线包
-bash scripts/offline-pack.sh
-
-# 2. 传输到目标机器
-scp ~/nvim-offline-*.tar.gz user@server:/tmp/
-
-# 3. 在目标机器解压并部署
-cd /tmp && tar xzf nvim-offline-*.tar.gz
-bash nvim-bundle/deploy.sh
-
-# 前提: 目标机器需已安装 nvim + gcc（可通过 install-deps.sh 安装）
-```
+| Profile | `configs/common` + `configs/nvim` | `configs/desktop` | `configs/server` + `configs/site` |
+|---------|:---:|:---:|:---:|
+| `macos-desktop` | ✓ | ghostty / cmux / flameshot | – |
+| `ubuntu-desktop` | ✓ | alacritty (`shared.toml` + `alacritty.toml`) | – |
+| `ubuntu-server` | ✓ | – | `.bash_server` + `aliyun-gpu.sh` |
 
 ## 目录结构
 
 ```text
 z-codespace/
+├── BOOTSTRAP.md                 # 冷启动第三层：软件清单与约束（给 Agent 读）
+├── AGENTS.md / CLAUDE.md        # 仓库级 Agent 规则
+├── install.sh                   # 冷启动第一层：软链 + Git + SSH 入口
+├── Casks/
+│   └── flameshot.rb             # macOS Flameshot 自定义 Homebrew cask
 ├── configs/
-│   ├── common/                  # 三 profile 都装
-│   │   ├── .bash_profile        #   Bash 登录 shell 入口
-│   │   ├── .bashrc              #   Bash (含平台检测 / Git 别名 / AI CLI)
-│   │   ├── .vimrc               #   Vim
-│   │   └── .tmux.conf           #   Tmux (含 nvim 无缝导航)
-│   ├── desktop/                 # 只在 desktop profile 装
-│   │   ├── .config/alacritty/shared.toml          # 跨 OS 共享片段
-│   │   ├── macos/.config/alacritty/alacritty.toml
-│   │   ├── macos/.config/ghostty/config
-│   │   └── linux/.config/alacritty/alacritty.toml
-│   ├── server/                  # 只在 ubuntu-server profile 装
-│   │   ├── .bash_server         #   SSH 会话优化、服务器别名
-│   │   └── .claude-squad/config.json  # claude-squad 多 agent 会话 TUI（claude/codex/opencode）
-│   └── nvim/                    # 三 profile 共享（LazyVim）
-│       ├── init.lua
-│       ├── lazyvim.json
-│       ├── lazy-lock.json
-│       └── lua/
-│           ├── config/          #   options/keymaps/autocmds
-│           └── plugins/         #   editor/lang/treesitter
+│   ├── common/                  # 三 profile 共用（.bash_profile / .bashrc / .vimrc / .tmux.conf）
+│   │   └── bash/                #   git-aliases.sh / ai-cli.sh
+│   ├── desktop/                 # 桌面配置（macos: ghostty/flameshot；linux: alacritty）
+│   ├── server/                  # 服务器配置（.bash_server）
+│   ├── site/                    # 站点配置（aliyun-gpu.sh / ssh_config.site.example）
+│   └── nvim/                    # LazyVim 配置（三 profile 共享，软链到 ~/.config/nvim）
 ├── scripts/
-│   ├── lib.sh                   #   共享工具（日志、safe_link、检测）
-│   ├── profile-common.sh        #   common layer apply 函数
-│   ├── profile-desktop.sh       #   desktop layer apply + macOS brew
-│   ├── profile-server.sh        #   server layer apply
-│   ├── profile-packages.sh      #   Linux 包管理器安装基础工具
-│   ├── setup-ssh.sh             #   自动检查 / 生成 SSH key
-│   ├── install-antigravity.sh   #   Antigravity App + CLI (agy)
-│   ├── install-orca.sh          #   Orca 桌面应用（Linux 命令 orca-ide）
-│   ├── install-deps.sh          #   安装 Neovim 及依赖
-│   ├── install-nvim.sh          #   部署 LazyVim 配置
-│   ├── uninstall-nvim.sh        #   卸载 nvim 配置
-│   ├── update-nvim.sh           #   更新插件
-│   ├── doctor.sh                #   环境健康检查
-│   ├── offline-pack.sh          #   创建离线包
-│   └── offline-deploy.sh        #   离线部署
-├── skills/                      # 共享 Agent Skills（Claude / Codex / Grok 共用一份）
-│   └── codex-account-switch/    #   Codex 多账号切换（SKILL.md + bin/codex-switch）
-├── AGENTS.md                    # 所有 agent 的仓库说明（CLAUDE.md 通过 @AGENTS.md 引用）
-├── docs/
-│   ├── DESIGN.md                # 设计文档（依赖 / LSP / 离线迁移）
-│   └── superpowers/specs/       # 重构设计 spec
-├── install.sh                   # 统一安装入口（按 profile dispatch）
-└── README.md
+│   ├── lib.sh                   # 日志、系统检测、safe_link（含备份）
+│   ├── profile-common.sh        # common + nvim + skills 软链
+│   ├── profile-desktop.sh       # desktop/macos 与 desktop/linux 软链
+│   ├── profile-server.sh        # server 软链
+│   └── setup-ssh.sh             # ed25519 生成、GitHub 443、Include ~/.ssh/config.site
+└── skills/                      # 共享 Agent Skills（Claude / Codex / Grok 唯一真身）
+    └── codex-account-switch/
 ```
 
-## 环境检查
+## 核心配置速查
 
-```bash
-bash scripts/doctor.sh
-```
+- **Bash**：跨平台别名、`proxy` / `noproxy` 本地代理探测、Git 快捷命令（`gg` 查看）、GPU 监控（`nv` / `rc`）、AI CLI 安装与启动（`icc`/`icx`/`igk`，`cc`/`ccf`/`ccy`，`cx`/`cxf`/`cxy`，`gk`/`gky`）。
+- **tmux**：前缀 `C-a`、vi 模式、与 nvim 无缝导航（`C-h/j/k/l`）、Pane 互换（`C-a H/J/K/L`）。
+- **Neovim (LazyVim)**：Leader 为 `Space`，需 Neovim ≥ 0.11.2，首次打开自动拉插件；Visual 模式 `<Space>xs` 复制「绝对路径 + 选中代码」给 AI CLI。
+- **SSH**：`scripts/setup-ssh.sh` 复用已有 key 或生成 `~/.ssh/id_ed25519`，配置 `github.com` 走 `ssh.github.com:443`、钉 `known_hosts`，并在存在 `~/.ssh/config.site` 时写入 `Include`。
+- **共享 Agent Skills**：`skills/<name>/` 按目录软链到 `~/.agents/skills/<name>`（Codex / Grok）和 `~/.claude/skills/<name>`（Claude Code），`skills/<name>/bin/*` 链到 `~/.local/bin`。维护约定见 [AGENTS.md](AGENTS.md)。
 
-输出示例：
-
-```text
-[STEP]  --- 必需工具 ---
-[ OK ]  nvim: NVIM v0.10.4
-[ OK ]  git: git version 2.43.0
-[ OK ]  rg: ripgrep 14.1.1
-[ OK ]  node: v22.12.0
-[STEP]  --- 配置状态 ---
-[ OK ]  nvim 配置: ~/.config/nvim -> .../configs/nvim
-[ OK ]  lazy-lock.json 存在 (约 40 个插件)
-```
-
-## 配置说明
-
-### Neovim (LazyVim)
-
-- **Leader 键**: Space
-- **缩进**: 4 空格 (Python)，2 空格 (C/C++)
-- **LSP**: pyright / clangd（系统）/ lua_ls / bash-language-server（其它语言通过 LazyVim extras 按需开启）
-- **格式化**: black + isort (Python) / stylua (Lua) / shfmt (Shell)
-- **Treesitter**: python / c / cpp / cuda / lua / bash / json / yaml / toml / markdown(+\_inline) / vim / vimdoc / regex / query
-- **版本锁定**: 通过 lazy-lock.json，不自动检查更新
-
-常用快捷键：
-
-| 快捷键 | 功能 |
-|--------|------|
-| `<Space>ff` | 查找文件 |
-| `<Space>fg` | 全局搜索 (ripgrep) |
-| `<Space>e` | 文件浏览器 |
-| `<Space>l` | Lazy 插件管理 |
-| `<C-\>` | 浮动终端 |
-| `<C-h/j/k/l>` | 窗口 / tmux pane 切换 |
-| `<Space><Left>` / `<Space><Right>` | Neo-tree 窗口左/右调整（只在 Neo-tree 内生效） |
-| `<Space>xs` (Visual) | 复制「绝对路径 + 选中代码」到剪贴板（粘贴到 Codex / Claude Code 等） |
-
-### tmux
-
-- 前缀键: `C-a`
-- vi 模式 + hjkl 面板导航
-- 窗口切换: macOS 用 `C-a Left/Right`，Linux 用 `Alt-h/l`
-- Pane 位置互换: `C-a H/J/K/L`
-- 鼠标支持
-- 与 nvim 无缝导航 (`C-h/j/k/l`)
-- `escape-time 10` 避免 nvim Esc 延迟
-
-### Bash
-
-- 跨平台别名（macOS/Linux）
-- Git 快捷键 (输入 `gg` 查看)
-- GPU 监控别名 (NVIDIA: `nv` / AMD: `rc`)
-- AI CLI 工具集成 (`icc`/`ucc` 安装/卸载 Claude Code, `icx`/`ucx` 安装/卸载 Codex, `igk`/`ugk` 安装/卸载 Grok, `iagy`/`uagy` 安装/卸载 Antigravity CLI, `iag`/`uag` 安装/卸载 Antigravity App, `iorca`/`uorca` 安装/卸载 Orca)
-- Codex 启动别名：`cx` / `cxf` / `cxy`
-- Claude 启动别名：`cc` / `ccf` / `ccy`
-- Grok 启动别名：`gk`
-- 第三方中转交给专用切换器管理（`bash install.sh --ai-switch` 安装）：macOS 用 [CC Switch](https://github.com/farion1231/cc-switch) 桌面 App，Linux server 用 [cc-switch-cli](https://github.com/SaladDay/cc-switch-cli)
-- 本仓库只负责安装切换器，**不保存 AI API Key / Base URL**；provider 列表由切换器自己管理，新增中转站在切换器内操作即可，`cc` / `cx` 会自动读取其写入的原生 config。Grok 使用 xAI 官方安装器和 `~/.grok` 原生配置
-
-### SSH key
-
-macOS / Linux 基础安装都会执行 `scripts/setup-ssh.sh`：
-
-- 已存在 `~/.ssh/id_ed25519` / `id_rsa` / `id_ecdsa` 时直接复用
-- 不存在时自动生成 `~/.ssh/id_ed25519`
-- 尝试把 `github.com` 加入 `~/.ssh/known_hosts`
-- 输出公钥，方便添加到 GitHub 的 SSH keys
-
-### 共享 Agent Skills
-
-`skills/<name>/SKILL.md` 是唯一真身，基础安装时会按目录软链到：
-
-| 路径 | 读取方 |
-|---|---|
-| `~/.agents/skills/<name>` | Codex、Grok |
-| `~/.claude/skills/<name>` | Claude Code |
-
-`skills/<name>/bin/*` 会链到 `~/.local/bin`。任何 agent 改了 skill，改的都是仓库里这一份，`git diff` 即可看到。
-
-```bash
-bash install.sh --skills   # 只重新链接 skills（新增 skill 后执行）
-```
-
-各 agent 的维护规则见 [AGENTS.md](AGENTS.md)。
-
-### 私有配置
+## 私有配置
 
 ```bash
 cp .bash_private.example ~/.bash_private
-vim ~/.bash_private
 ```
 
-## 故障排查
-
-### nvim 启动报错
-
-```bash
-# 检查依赖
-bash scripts/doctor.sh
-
-# 重新同步插件
-bash scripts/update-nvim.sh
-
-# 完全重装
-bash scripts/uninstall-nvim.sh --all
-bash scripts/install-nvim.sh
-```
-
-### Treesitter parser 编译失败
-
-确保安装了 C 编译器：
-
-```bash
-# macOS
-xcode-select --install
-
-# Linux (Debian/Ubuntu)
-sudo apt-get install build-essential
-
-# Linux (RHEL/CentOS)
-sudo yum install gcc gcc-c++ make
-```
-
-### LSP 不工作
-
-```bash
-# nvim 内检查 LSP 状态
-:LspInfo
-
-# 检查 mason 安装的工具
-:Mason
-
-# 手动安装 LSP
-:MasonInstall pyright
-```
-
-### 离线部署后插件不可用
-
-- 确保源机器和目标机器**架构一致** (x86_64 / arm64)
-- Treesitter parser (.so) 不能跨架构迁移
-- 检查 `~/.local/share/nvim/lazy/` 目录是否完整
-
-## 设计文档
-
-详细的设计决策、依赖管理、LSP 策略、离线迁移方案见 [docs/DESIGN.md](docs/DESIGN.md)。
+本仓库不保存密钥、Token 或机器特定 SSH 配置（见 `.gitignore`）。

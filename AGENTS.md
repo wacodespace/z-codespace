@@ -3,13 +3,25 @@
 Shared instructions for every coding agent working in this repo: Codex, Grok, Claude Code
 (via `CLAUDE.md`, which imports this file), and others.
 
-z-codespace is a dotfiles / dev-environment repo. `install.sh` symlinks `configs/` and
-`skills/` into `$HOME` per profile (macos-desktop, ubuntu-desktop, ubuntu-server).
+z-codespace is a slim dotfiles, shared-skills, and cold-start repo. It separates bootstrap
+into three layers:
+
+1. **Scripts (`install.sh` + `scripts/`)** — deterministic only: symlink `configs/`
+   (including `configs/nvim` -> `~/.config/nvim`) per profile (`macos-desktop`,
+   `ubuntu-desktop`, `ubuntu-server`), symlink `skills/` per directory, write global Git
+   config, and run `scripts/setup-ssh.sh` (which performs `ssh-keyscan` for
+   `ssh.github.com:443`). Never add package managers or software downloaders back into
+   `install.sh` / `scripts/`.
+2. **Shell (`configs/common/bash/ai-cli.sh`)** — keeps `icc` / `icx` / `igk` (and
+   `ucc` / `ucx` / `ugk`) to bootstrap the first AI agent CLI on a fresh machine.
+3. **Manifest (`BOOTSTRAP.md`)** — desired packages and known platform constraints for an
+   agent to install on demand. Keep it declarative; do not copy installer scripts into it.
 
 ## Shared skills
 
 `skills/<name>/SKILL.md` is the single source for every agent's skills. `install.sh`
-(or `install.sh --skills` on its own) symlinks each skill directory into:
+(or `install.sh --skills` on its own, which skips Git and SSH changes) symlinks each skill
+directory into:
 
 | Path | Read by |
 |---|---|
@@ -34,10 +46,11 @@ Rules:
 
 ## Repo conventions
 
+- `install.sh` accepts only `--profile`, `--skills`, and `--force` (plus `-h`/`--help`).
 - Commit messages are in English, imperative mood, one logical change per commit.
 - Don't commit or push unless the user asks. Leave unrelated uncommitted changes alone.
 - Never commit secrets or machine-specific files. `.bash_private`,
   `configs/site/ssh_config.site`, `**/.claude/settings.local.json` and auth/token files are
   all off-limits (see `.gitignore`).
 - Shell scripts must work with the bash on both macOS and Linux. Use the helpers in
-  `scripts/lib.sh` (`safe_link`, `log_*`, `detect_os`).
+  `scripts/lib.sh` (`safe_link`, `log_*`, `detect_os`, `detect_arch`, `has_cmd`).

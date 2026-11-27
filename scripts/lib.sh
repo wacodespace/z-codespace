@@ -22,7 +22,7 @@ log_error() { printf "${_RED}[ERROR]${_NC} %s\n" "$*" >&2; }
 log_step()  { printf "${_BLUE}[STEP]${_NC}  %s\n" "$*"; }
 log_ok()    { printf "${_GREEN}[ OK ]${_NC}  %s\n" "$*"; }
 
-# --- 操作系统检测 ---
+# --- 系统与命令检测 ---
 detect_os() {
     case "$(uname -s)" in
         Darwin) echo "macos" ;;
@@ -39,51 +39,8 @@ detect_arch() {
     esac
 }
 
-# --- Linux 发行版检测 ---
-detect_linux_distro() {
-    if [ -f /etc/os-release ]; then
-        # shellcheck disable=SC1091
-        . /etc/os-release
-        case "$ID" in
-            ubuntu|debian|pop|linuxmint) echo "debian" ;;
-            centos|rhel|rocky|alma|fedora) echo "rhel" ;;
-            arch|manjaro) echo "arch" ;;
-            *) echo "$ID" ;;
-        esac
-    elif [ -f /etc/redhat-release ]; then
-        echo "rhel"
-    elif [ -f /etc/debian_version ]; then
-        echo "debian"
-    else
-        echo "unknown"
-    fi
-}
-
-# --- 包管理器检测 ---
-detect_pkg_manager() {
-    if command -v brew >/dev/null 2>&1; then
-        echo "brew"
-    elif command -v apt-get >/dev/null 2>&1; then
-        echo "apt"
-    elif command -v dnf >/dev/null 2>&1; then
-        echo "dnf"
-    elif command -v yum >/dev/null 2>&1; then
-        echo "yum"
-    elif command -v pacman >/dev/null 2>&1; then
-        echo "pacman"
-    else
-        echo "unknown"
-    fi
-}
-
-# --- 命令存在检测 ---
 has_cmd() {
     command -v "$1" >/dev/null 2>&1
-}
-
-# --- 版本比较: $1 >= $2 ---
-version_ge() {
-    printf '%s\n%s' "$2" "$1" | sort -V | head -n1 | grep -qx "$2"
 }
 
 # --- 备份路径（幂等） ---
@@ -92,14 +49,14 @@ backup_path() {
     if [ -e "$target" ] && [ ! -L "$target" ]; then
         local backup="${target}.bak.$(date +%Y%m%d%H%M%S)"
         log_warn "备份: $target -> $backup"
-        cp -r "$target" "$backup"
+        mv "$target" "$backup"
     elif [ -L "$target" ]; then
         log_info "移除旧软链接: $target"
         rm -f "$target"
     fi
 }
 
-# --- 创建软链接（幂等） ---
+# --- 创建软链接（幂等，支持文件与目录） ---
 safe_link() {
     local src="$1"
     local dst="$2"
@@ -112,10 +69,9 @@ safe_link() {
 
     # 如果已经是正确的软链接，跳过
     if [ -L "$dst" ]; then
-        local current_target
-        current_target=$(readlink -f "$dst" 2>/dev/null || readlink "$dst")
-        local expected
-        expected=$(cd "$(dirname "$src")" && pwd)/$(basename "$src")
+        local current_target expected
+        current_target="$(readlink -f "$dst" 2>/dev/null || readlink "$dst")"
+        expected="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
         if [ "$current_target" = "$expected" ]; then
             log_ok "已链接: $dst"
             return 0
@@ -129,28 +85,6 @@ safe_link() {
     fi
 
     mkdir -p "$(dirname "$dst")"
-    ln -sf "$src" "$dst"
+    ln -s "$src" "$dst"
     log_ok "链接: $src -> $dst"
-}
-
-# --- 检查最低 Neovim 版本 ---
-check_nvim_version() {
-    local required="${1:-0.11.2}"
-    if ! has_cmd nvim; then
-        return 1
-    fi
-    local current
-    current=$(nvim --version | head -n1 | sed 's/NVIM v//')
-    version_ge "$current" "$required"
-}
-
-# --- 获取项目根目录 ---
-get_project_root() {
-    local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")" && pwd)"
-    if [ "$(basename "$script_dir")" = "scripts" ]; then
-        dirname "$script_dir"
-    else
-        echo "$script_dir"
-    fi
 }

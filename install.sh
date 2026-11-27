@@ -1,28 +1,6 @@
 #!/usr/bin/env bash
-# z-codespace/install.sh — 统一安装入口（按 profile dispatch）
-# ============================================================
-#
-# Profile 分类（决定装哪些 layer）:
-#   macos-desktop    common + desktop/shared + desktop/macos
-#   ubuntu-desktop   common + desktop/shared + desktop/linux
-#   ubuntu-server    common + server
-#
-# 用法:
-#   bash install.sh                            # 自动检测 profile，交互式询问 nvim
-#   bash install.sh --profile=ubuntu-server    # 显式指定 profile
-#   bash install.sh --server                   # 语法糖 = --profile=ubuntu-server
-#   bash install.sh --desktop                  # mac → macos-desktop, linux → ubuntu-desktop
-#   bash install.sh --all                      # profile + nvim + ai-switch + antigravity + orca
-#   bash install.sh --nvim-only                # 仅 Neovim 环境
-#   bash install.sh --ai-switch                # 仅 AI 中转切换器
-#   bash install.sh --skills                   # 仅链接共享 Agent Skills（skills/）
-#   bash install.sh --antigravity              # 仅 Antigravity App + CLI
-#   bash install.sh --orca                     # 仅 Orca 桌面应用
-#   bash install.sh --force                    # 强制覆盖
-#
-# Claude Code 状态栏 (HUD) 现在改用官方 plugin marketplace 安装，
-# 不再由本脚本管理：在 Claude Code 里运行 /claude-hud:setup 即可。
-# ============================================================
+# z-codespace/install.sh — 冷启动第一层：软链 configs / skills + Git + SSH
+# 不调用包管理器，不下载软件（setup-ssh.sh 仅做 ssh-keyscan 钉 GitHub host key）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
@@ -31,21 +9,11 @@ source "$SCRIPT_DIR/scripts/lib.sh"
 source "$SCRIPT_DIR/scripts/profile-common.sh"
 source "$SCRIPT_DIR/scripts/profile-desktop.sh"
 source "$SCRIPT_DIR/scripts/profile-server.sh"
-source "$SCRIPT_DIR/scripts/profile-packages.sh"
 
 PROFILE=""
 FORCE="false"
-INSTALL_NVIM=false
-NVIM_ONLY=false
-INSTALL_AI_SWITCH=false
-AI_SWITCH_ONLY=false
 SKILLS_ONLY=false
-INSTALL_ANTIGRAVITY=false
-ANTIGRAVITY_ONLY=false
-INSTALL_ORCA=false
-ORCA_ONLY=false
 
-# --- 自动检测 profile ---
 detect_profile() {
     if [ "$(uname -s)" = "Darwin" ]; then
         echo "macos-desktop"
@@ -56,149 +24,66 @@ detect_profile() {
     fi
 }
 
-# --- 参数解析 ---
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --profile=*)      PROFILE="${1#--profile=}"; shift ;;
-        --profile)        PROFILE="$2"; shift 2 ;;
-        --server)         PROFILE="ubuntu-server"; shift ;;
-        --desktop)
-            if [ "$(uname -s)" = "Darwin" ]; then
-                PROFILE="macos-desktop"
-            else
-                PROFILE="ubuntu-desktop"
-            fi
-            shift ;;
-        --all)            INSTALL_NVIM=true; INSTALL_AI_SWITCH=true; INSTALL_ANTIGRAVITY=true; INSTALL_ORCA=true; shift ;;
-        --nvim-only)      NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
-        --ai-switch)      AI_SWITCH_ONLY=true; INSTALL_AI_SWITCH=true; shift ;;
-        --skills)         SKILLS_ONLY=true; shift ;;
-        --antigravity)    ANTIGRAVITY_ONLY=true; INSTALL_ANTIGRAVITY=true; shift ;;
-        --orca)           ORCA_ONLY=true; INSTALL_ORCA=true; shift ;;
-        --force)          FORCE="true"; shift ;;
+        --profile=*) PROFILE="${1#--profile=}"; shift ;;
+        --profile)
+            [[ $# -ge 2 ]] || { log_error "--profile 缺少参数"; exit 1; }
+            PROFILE="$2"; shift 2 ;;
+        --skills)    SKILLS_ONLY=true; shift ;;
+        --force)     FORCE="true"; shift ;;
         -h|--help)
             cat <<'EOF'
 用法: install.sh [选项]
 
-Profile（决定装哪些 layer）:
+选项:
   --profile=macos-desktop|ubuntu-desktop|ubuntu-server
-  --profile <profile>       同上
-  --server                  = --profile=ubuntu-server
-  --desktop                 macOS 上 = macos-desktop, Linux 上 = ubuntu-desktop
-  （不指定时自动检测：macOS → macos-desktop, Linux+SSH → ubuntu-server, else → ubuntu-desktop）
-
-可选组件:
-  --all                     基础配置 + Neovim + AI 中转切换器 + Antigravity + Orca
-  --nvim-only               仅 Neovim 环境
-  --ai-switch               仅 AI 中转切换器 (macOS: CC Switch / Linux: cc-switch-cli)
-  --skills                  仅链接共享 Agent Skills 到 Claude / Codex / Grok（基础配置也会做）
-  --antigravity             仅 Antigravity App + CLI（ubuntu-server 只装 CLI）
-  --orca                    仅 Orca（ubuntu-server 跳过；Linux 命令是 orca-ide）
-
-其它:
-  --force                   强制覆盖，不备份
-  -h, --help                显示此帮助
+  --profile <profile>   显式指定 profile（默认：macOS → macos-desktop，
+                        Linux+SSH → ubuntu-server，其余 Linux → ubuntu-desktop）
+  --skills              仅软链共享 Agent Skills（不改 Git / SSH）
+  --force               强制覆盖，不备份
+  -h, --help            显示此帮助
 EOF
             exit 0
             ;;
-        *)
-            log_error "未知参数: $1"
-            exit 1
-            ;;
+        *) log_error "未知参数: $1"; exit 1 ;;
     esac
 done
 
 apply_profile() {
     case "$PROFILE" in
         macos-desktop)
-            install_homebrew
-            install_desktop_apps_macos
             apply_common "$FORCE"
-            apply_desktop_shared "$FORCE"
             apply_desktop_macos "$FORCE"
             ;;
         ubuntu-desktop)
-            install_packages_apt_min
             apply_common "$FORCE"
-            apply_desktop_shared "$FORCE"
             apply_desktop_linux "$FORCE"
             ;;
         ubuntu-server)
-            install_packages_apt_min
             apply_common "$FORCE"
             apply_server "$FORCE"
             ;;
         *)
-            log_error "不支持的 profile: $PROFILE"
-            log_error "支持: macos-desktop, ubuntu-desktop, ubuntu-server"
+            log_error "不支持的 profile: $PROFILE（支持: macos-desktop, ubuntu-desktop, ubuntu-server）"
             exit 1
             ;;
     esac
 }
 
-# desktop：App + CLI。ubuntu-server：只装 CLI（没有桌面环境）。
-# 失败不中断其余安装；网络恢复后可再跑 iag / iagy。
-install_antigravity() {
-    local mode="all"
-    case "$PROFILE" in
-        ubuntu-server) mode="cli" ;;
-    esac
-
-    if [ "$mode" = "all" ] && [ "$(uname -s)" = "Darwin" ]; then
-        install_homebrew
-    fi
-
-    echo ""
-    log_step "安装 Antigravity（${mode}）..."
-    if [ "$mode" = "cli" ]; then
-        log_info "ubuntu-server 不安装桌面 App。需要 App 时在桌面执行 iag。"
-    fi
-    if ! bash "$SCRIPT_DIR/scripts/install-antigravity.sh" "$mode"; then
-        log_warn "Antigravity 安装未完成。可稍后执行 iagy（CLI）或 iag（App）"
-        log_warn "或: bash install.sh --antigravity"
-    fi
-}
-
-# 桌面应用。CLI 随应用安装：macOS 命令 orca，Linux 命令 orca-ide。
-# ubuntu-server 没有桌面环境，跳过。失败不中断其余安装。
-install_orca() {
-    case "$PROFILE" in
-        ubuntu-server)
-            log_info "ubuntu-server 不安装 Orca。需要时在桌面执行 iorca。"
-            return 0
-            ;;
-    esac
-
-    if [ "$(uname -s)" = "Darwin" ]; then
-        install_homebrew
-    fi
-
-    echo ""
-    log_step "安装 Orca..."
-    if ! bash "$SCRIPT_DIR/scripts/install-orca.sh"; then
-        log_warn "Orca 安装未完成。可稍后执行 iorca，或 bash install.sh --orca"
-    fi
-}
-
-# --- 一次性 Git 全局配置（取代 .bashrc 启动时反复写 ~/.gitconfig）---
 setup_git_global_config() {
     if ! has_cmd git; then
         log_warn "git 未安装，跳过 git config 全局设置"
         return 0
     fi
     log_step "配置 Git 全局设置..."
-
-    # 提交身份（提交作者会写进公开历史，必须显式设置，不能依赖仓库本地配置）
     git config --global user.name "acodespace"
     git config --global user.email "7epimenides@gmail.com"
-
-    # UTF-8 / 中文文件名输出
     git config --global core.quotepath false
     git config --global gui.encoding utf-8
     git config --global i18n.commitencoding utf-8
     git config --global i18n.logoutputencoding utf-8
 
-    # Linux profile：HTTPS → SSH 重写（macOS 桌面不需要，避免限制 https clone）
     case "$PROFILE" in
         ubuntu-*)
             if ! git config --global --get "url.git@github.com:.insteadOf" >/dev/null 2>&1; then
@@ -212,90 +97,29 @@ setup_git_global_config() {
 main() {
     if [ "$SKILLS_ONLY" = "true" ]; then
         apply_agent_skills "$FORCE"
-        return
+        return 0
     fi
 
-    # nvim-only / ai-switch-only 时不需要 profile。装 Antigravity / Orca 时仍要，
-    # 用来决定 server 跳过桌面应用还是连应用一起装。
     if [ -z "$PROFILE" ]; then
-        if [ "$INSTALL_ANTIGRAVITY" = "true" ] || [ "$INSTALL_ORCA" = "true" ] || { [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; }; then
-            PROFILE="$(detect_profile)"
-            log_info "自动检测 profile: $PROFILE"
-        fi
+        PROFILE="$(detect_profile)"
+        log_info "自动检测 profile: $PROFILE"
     fi
 
-    log_step "=========================================="
-    log_step "z-codespace 开发环境安装"
-    [ -n "$PROFILE" ] && log_step "Profile: $PROFILE"
-    log_step "系统: $(detect_os) ($(detect_arch))"
-    log_step "=========================================="
-    echo ""
+    log_step "z-codespace 基础环境部署 | Profile: $PROFILE | 系统: $(detect_os) ($(detect_arch))"
 
-    # --- 基础配置（按 profile dispatch） ---
-    if [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ] && [ "$ORCA_ONLY" != "true" ]; then
-        apply_profile
-        setup_git_global_config
+    # 1. 软链 configs/（含 configs/nvim）
+    apply_profile
+    # 2. 软链 skills/
+    apply_agent_skills "$FORCE"
+    # 3. Git 全局配置
+    setup_git_global_config
+    # 4. SSH bootstrap
+    log_step "检查 SSH key..."
+    bash "$SCRIPT_DIR/scripts/setup-ssh.sh"
 
-        # SSH key（所有 profile 都需要）
-        log_step "检查 SSH key..."
-        bash "$SCRIPT_DIR/scripts/setup-ssh.sh"
-
-        echo ""
-    fi
-
-    # --- Antigravity App + CLI（--all / --antigravity；不进默认交互安装） ---
-    if [ "$INSTALL_ANTIGRAVITY" = "true" ]; then
-        install_antigravity
-    fi
-
-    # --- Orca（--all / --orca；不进默认交互安装） ---
-    if [ "$INSTALL_ORCA" = "true" ]; then
-        install_orca
-    fi
-
-    # --- Neovim 环境 ---
-    if [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ] && [ "$ORCA_ONLY" != "true" ]; then
-        if [ "$INSTALL_NVIM" = "true" ]; then
-            log_step "安装 Neovim (LazyVim) 环境..."
-            echo ""
-            bash "$SCRIPT_DIR/scripts/install-deps.sh"
-            echo ""
-            local nvim_flags=""
-            [ "$FORCE" = "true" ] && nvim_flags="--force"
-            bash "$SCRIPT_DIR/scripts/install-nvim.sh" $nvim_flags
-        elif [ "$NVIM_ONLY" != "true" ]; then
-            echo ""
-            log_info "是否安装 Neovim (LazyVim) 开发环境？"
-            log_info "（需要下载 ~200MB 依赖和插件）"
-            printf "  输入 y 安装，其他跳过: "
-            read -r answer
-            if [[ "$answer" =~ ^[Yy] ]]; then
-                echo ""
-                bash "$SCRIPT_DIR/scripts/install-deps.sh"
-                echo ""
-                bash "$SCRIPT_DIR/scripts/install-nvim.sh"
-            else
-                log_info "跳过 Neovim 环境安装"
-                log_info "后续可运行: bash scripts/install-deps.sh && bash scripts/install-nvim.sh"
-            fi
-        fi
-    fi
-
-    # --- AI 中转切换器（flag 驱动，不交互；默认流程不触发） ---
-    if [ "$INSTALL_AI_SWITCH" = "true" ]; then
-        echo ""
-        log_step "安装 AI 第三方中转切换器..."
-        echo ""
-        bash "$SCRIPT_DIR/scripts/install-ai-switcher.sh"
-    fi
-
-    echo ""
-    log_ok "=========================================="
-    log_ok "安装完成！"
-    log_ok "=========================================="
-    echo ""
-    log_info "请执行 'source ~/.bashrc' 或重新打开终端使配置生效"
-    log_info "环境检查: bash scripts/doctor.sh"
+    log_ok "基础配置完成！"
+    log_info "下一步: source ~/.bashrc && proxy && icc   # 或 icx / igk 拉起第一个 Agent"
+    log_info "其余软件按 BOOTSTRAP.md 交由 Agent 安装"
 }
 
 main "$@"

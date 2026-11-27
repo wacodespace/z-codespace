@@ -1,12 +1,10 @@
-# ai-cli.sh - Claude Code / Codex / Grok / Antigravity 安装管理函数
+# ai-cli.sh - Claude Code / Codex / Grok CLI 安装管理函数（冷启动第二层）
 # 由 configs/common/.bashrc 的 BASH_DIR loader 自动 source
 # 依赖：bashrc 已 export AI_NPM_PREFIX
 # 用户面：icc/ucc (Claude Code 装/卸) / icx/ucx (Codex 装/卸) / igk/ugk (Grok 装/卸)
-#         iagy/uagy (Antigravity CLI 装/卸) / iag/uag (Antigravity App 装/卸)
-#         iorca/uorca (Orca 装/卸)
-#         cc / cx / gk ；Antigravity CLI 的命令就是 agy
-# 第三方中转：交给 CC Switch (macOS) / cc-switch-cli (headless) 管理，见
-#   scripts/install-ai-switcher.sh；本文件 launcher 保持裸调，读取切换器写入的原生 config
+#         cc / cx / gk 启动器
+# 第三方中转：交给 CC Switch (macOS) / cc-switch-cli (Linux) 管理，见 BOOTSTRAP.md；
+#   本文件 launcher 保持裸调，读取切换器写入的原生 config
 # ============================================================
 
 _ai_fetch() {
@@ -349,64 +347,4 @@ gk() {
 
 gky() {
     _grok_run --permission-mode bypassPermissions "$@"
-}
-
-# Antigravity 的安装步骤在 scripts/install-antigravity.sh。
-# 这里只转发，避免和 npm / grok 的安装逻辑缠在一起。
-_antigravity_installer() {
-    local here
-    here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    printf '%s\n' "$(cd "${here}/../../.." && pwd)/scripts/install-antigravity.sh"
-}
-
-_run_antigravity_installer() {
-    local script
-    script="$(_antigravity_installer)"
-    if [ ! -f "$script" ]; then
-        printf '%s\n' "找不到 Antigravity 安装脚本: ${script}" >&2
-        return 1
-    fi
-    bash "$script" "$@"
-}
-
-iagy() {
-    _run_antigravity_installer cli
-}
-
-uagy() {
-    _run_antigravity_installer uninstall cli
-}
-
-iag() {
-    _run_antigravity_installer app
-}
-
-uag() {
-    _run_antigravity_installer uninstall app
-}
-
-_orca_installer() {
-    local here
-    here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    printf '%s\n' "$(cd "${here}/../../.." && pwd)/scripts/install-orca.sh"
-}
-
-iorca() {
-    local script
-    script="$(_orca_installer)"
-    if [ ! -f "$script" ]; then
-        printf '%s\n' "找不到 Orca 安装脚本: ${script}" >&2
-        return 1
-    fi
-    bash "$script" install
-}
-
-uorca() {
-    local script
-    script="$(_orca_installer)"
-    if [ ! -f "$script" ]; then
-        printf '%s\n' "找不到 Orca 安装脚本: ${script}" >&2
-        return 1
-    fi
-    bash "$script" uninstall
 }
