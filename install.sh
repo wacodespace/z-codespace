@@ -12,11 +12,12 @@
 #   bash install.sh --profile=ubuntu-server    # 显式指定 profile
 #   bash install.sh --server                   # 语法糖 = --profile=ubuntu-server
 #   bash install.sh --desktop                  # mac → macos-desktop, linux → ubuntu-desktop
-#   bash install.sh --all                      # profile + nvim + ai-switch + antigravity
+#   bash install.sh --all                      # profile + nvim + ai-switch + antigravity + orca
 #   bash install.sh --nvim-only                # 仅 Neovim 环境
 #   bash install.sh --ai-switch                # 仅 AI 中转切换器
 #   bash install.sh --skills                   # 仅链接共享 Agent Skills（skills/）
 #   bash install.sh --antigravity              # 仅 Antigravity App + CLI
+#   bash install.sh --orca                     # 仅 Orca 桌面应用
 #   bash install.sh --force                    # 强制覆盖
 #
 # Claude Code 状态栏 (HUD) 现在改用官方 plugin marketplace 安装，
@@ -41,6 +42,8 @@ AI_SWITCH_ONLY=false
 SKILLS_ONLY=false
 INSTALL_ANTIGRAVITY=false
 ANTIGRAVITY_ONLY=false
+INSTALL_ORCA=false
+ORCA_ONLY=false
 
 # --- 自动检测 profile ---
 detect_profile() {
@@ -66,11 +69,12 @@ while [[ $# -gt 0 ]]; do
                 PROFILE="ubuntu-desktop"
             fi
             shift ;;
-        --all)            INSTALL_NVIM=true; INSTALL_AI_SWITCH=true; INSTALL_ANTIGRAVITY=true; shift ;;
+        --all)            INSTALL_NVIM=true; INSTALL_AI_SWITCH=true; INSTALL_ANTIGRAVITY=true; INSTALL_ORCA=true; shift ;;
         --nvim-only)      NVIM_ONLY=true; INSTALL_NVIM=true; shift ;;
         --ai-switch)      AI_SWITCH_ONLY=true; INSTALL_AI_SWITCH=true; shift ;;
         --skills)         SKILLS_ONLY=true; shift ;;
         --antigravity)    ANTIGRAVITY_ONLY=true; INSTALL_ANTIGRAVITY=true; shift ;;
+        --orca)           ORCA_ONLY=true; INSTALL_ORCA=true; shift ;;
         --force)          FORCE="true"; shift ;;
         -h|--help)
             cat <<'EOF'
@@ -84,11 +88,12 @@ Profile（决定装哪些 layer）:
   （不指定时自动检测：macOS → macos-desktop, Linux+SSH → ubuntu-server, else → ubuntu-desktop）
 
 可选组件:
-  --all                     基础配置 + Neovim + AI 中转切换器 + Antigravity
+  --all                     基础配置 + Neovim + AI 中转切换器 + Antigravity + Orca
   --nvim-only               仅 Neovim 环境
   --ai-switch               仅 AI 中转切换器 (macOS: CC Switch / Linux: cc-switch-cli)
   --skills                  仅链接共享 Agent Skills 到 Claude / Codex / Grok（基础配置也会做）
   --antigravity             仅 Antigravity App + CLI（ubuntu-server 只装 CLI）
+  --orca                    仅 Orca（ubuntu-server 跳过；Linux 命令是 orca-ide）
 
 其它:
   --force                   强制覆盖，不备份
@@ -154,6 +159,27 @@ install_antigravity() {
     fi
 }
 
+# 桌面应用。CLI 随应用安装：macOS 命令 orca，Linux 命令 orca-ide。
+# ubuntu-server 没有桌面环境，跳过。失败不中断其余安装。
+install_orca() {
+    case "$PROFILE" in
+        ubuntu-server)
+            log_info "ubuntu-server 不安装 Orca。需要时在桌面执行 iorca。"
+            return 0
+            ;;
+    esac
+
+    if [ "$(uname -s)" = "Darwin" ]; then
+        install_homebrew
+    fi
+
+    echo ""
+    log_step "安装 Orca..."
+    if ! bash "$SCRIPT_DIR/scripts/install-orca.sh"; then
+        log_warn "Orca 安装未完成。可稍后执行 iorca，或 bash install.sh --orca"
+    fi
+}
+
 # --- 一次性 Git 全局配置（取代 .bashrc 启动时反复写 ~/.gitconfig）---
 setup_git_global_config() {
     if ! has_cmd git; then
@@ -189,10 +215,10 @@ main() {
         return
     fi
 
-    # nvim-only / ai-switch-only 时不需要 profile。装 Antigravity 时仍要，
-    # 用来决定 server 只装 CLI 还是 desktop 连 App 一起装。
+    # nvim-only / ai-switch-only 时不需要 profile。装 Antigravity / Orca 时仍要，
+    # 用来决定 server 跳过桌面应用还是连应用一起装。
     if [ -z "$PROFILE" ]; then
-        if [ "$INSTALL_ANTIGRAVITY" = "true" ] || { [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; }; then
+        if [ "$INSTALL_ANTIGRAVITY" = "true" ] || [ "$INSTALL_ORCA" = "true" ] || { [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ]; }; then
             PROFILE="$(detect_profile)"
             log_info "自动检测 profile: $PROFILE"
         fi
@@ -206,7 +232,7 @@ main() {
     echo ""
 
     # --- 基础配置（按 profile dispatch） ---
-    if [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ]; then
+    if [ "$NVIM_ONLY" != "true" ] && [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ] && [ "$ORCA_ONLY" != "true" ]; then
         apply_profile
         setup_git_global_config
 
@@ -222,8 +248,13 @@ main() {
         install_antigravity
     fi
 
+    # --- Orca（--all / --orca；不进默认交互安装） ---
+    if [ "$INSTALL_ORCA" = "true" ]; then
+        install_orca
+    fi
+
     # --- Neovim 环境 ---
-    if [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ]; then
+    if [ "$AI_SWITCH_ONLY" != "true" ] && [ "$ANTIGRAVITY_ONLY" != "true" ] && [ "$ORCA_ONLY" != "true" ]; then
         if [ "$INSTALL_NVIM" = "true" ]; then
             log_step "安装 Neovim (LazyVim) 环境..."
             echo ""

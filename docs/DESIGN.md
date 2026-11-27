@@ -71,6 +71,7 @@ z-codespace/
 │   ├── profile-packages.sh      # Linux 包管理器基础工具
 │   ├── setup-ssh.sh
 │   ├── install-antigravity.sh   # Antigravity App + CLI (agy)
+│   ├── install-orca.sh          # Orca 桌面应用（Linux 命令 orca-ide）
 │   ├── install-deps.sh          # Neovim 及运行依赖
 │   ├── install-nvim.sh          # 部署 LazyVim
 │   ├── uninstall-nvim.sh

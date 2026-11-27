@@ -164,6 +164,32 @@ check_antigravity_app() {
     esac
 }
 
+# --- 检查 Orca（可选）。Linux 不看裸命令 orca，那是 GNOME 屏幕阅读器。 ---
+check_orca_app() {
+    case "$OS" in
+        macos)
+            if [ -d "/Applications/Orca.app" ]; then
+                log_ok "Orca: /Applications/Orca.app"
+            else
+                log_warn "缺少可选应用: Orca (iorca 或 brew install --cask stablyai/orca/orca)"
+                WARNINGS=$((WARNINGS + 1))
+            fi
+            ;;
+        linux)
+            if [ -x "$HOME/.local/bin/orca-ide" ] || [ -x "$HOME/.local/opt/orca/Orca.AppImage" ]; then
+                log_ok "Orca: $HOME/.local/bin/orca-ide"
+            else
+                log_warn "缺少可选应用: Orca (iorca；命令是 orca-ide)"
+                WARNINGS=$((WARNINGS + 1))
+            fi
+            ;;
+        *)
+            log_warn "未检查 Orca（未知系统: $OS）"
+            WARNINGS=$((WARNINGS + 1))
+            ;;
+    esac
+}
+
 # --- 检查 mason 工具 ---
 check_mason() {
     local mason_dir="$HOME/.local/share/nvim/mason/bin"
@@ -219,6 +245,7 @@ main() {
     check_cmd grok    false "Grok CLI (终端 gk；与 <Space>xs 剪贴板配合)"
     check_cmd agy     false "Antigravity CLI (终端 agy；安装: iagy)"
     check_antigravity_app
+    check_orca_app
     check_cmd cc-switch false "AI 中转切换器 (headless: cc-switch-cli；macOS GUI 版无同名 CLI)"
     echo ""
 
